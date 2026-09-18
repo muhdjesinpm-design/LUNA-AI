@@ -125,6 +125,7 @@
       letter-spacing: 8px;
       background: linear-gradient(135deg, #ffffff 30%, #38bdf8 70%, #818cf8 100%);
       -webkit-background-clip: text;
+      background-clip: text; /* Added this line to fix the warning */
       -webkit-text-fill-color: transparent;
       line-height: 1;
       text-transform: uppercase;
@@ -335,11 +336,11 @@
   <video id="webcam" autoplay playsinline muted></video>
 
   <div class="quick-chips">
-    <button class="chip" onclick="quickAsk('Who is Luna?')">✨ Who is Luna?</button>
-    <button class="chip" onclick="quickAsk('Who created you?')">🛠️ Who built you?</button>
-    <button class="chip" onclick="quickAsk('Where is HOD room?')">📍 HOD Office</button>
-    <button class="chip" onclick="quickAsk('Where is Dr. Smith?')">👨‍🏫 Dr. Smith</button>
-    <button class="chip" onclick="quickAsk('Where are the restrooms?')">🚻 Restrooms</button>
+    <button class="chip" onclick="quickAsk('Who is Luna?')"> Who is Luna?</button>
+    <button class="chip" onclick="quickAsk('Who created you?')"> Who built you?</button>
+    <button class="chip" onclick="quickAsk('Where is HOD room?')"> HOD Office</button>
+    <button class="chip" onclick="quickAsk('Where is Dr. Smith?')"> Dr. Smith</button>
+    <button class="chip" onclick="quickAsk('Where are the restrooms?')"> Restrooms</button>
   </div>
 
   <div class="input-wrapper">
@@ -367,26 +368,8 @@
   let recognition = null;
   let personLeaveTimeout = null;
 
-  const creatorName = "Muhammed Jesin";
-  const creatorBatch = "CSE S3 A Batch";
-
-  const departmentContext = `
-    Your name is LUNA (Logical Universal Navigation Assistant). You are the autonomous AI receptionist and navigation guide for the Computer Science & Engineering (CSE) Department.
-    
-    CRITICAL IDENTITY & CREATOR DETAILS:
-    - Who created you / Who is your author / Who built you: I was created, built, and authored by Muhammed Jesin from CSE S3 A Batch.
-    - Who are you: I am LUNA, a Logical Universal Navigation Assistant designed to help visitors navigate the department. Whenever anyone asks about your origin, creator, author, or who built you, you must proudly state that you were created and built by Muhammed Jesin from CSE S3 A Batch.
-
-    Department Dataset:
-    - HOD Room / Dr. Johnson: Ground Floor, Room 001. Hours: 9 AM - 5 PM.
-    - Dr. Smith: Office Cabin 102 (1st Floor). Schedule: 9am-12pm Lecture Hall 3, 12pm-2pm Cabin 102, 2pm-5pm Hardware Lab.
-    - Prof. Davis: Office Cabin 204 (2nd Floor).
-    - Software Lab 1: 2nd Floor, Room 201.
-    - Hardware Lab: 1st Floor, Room 105.
-    - Restrooms: Ground Floor (entrance), 1st Floor (elevator), 2nd Floor (stairs).
-    
-    Instructions: Give concise, professional 1-2 sentence answers suited for speech synthesis.
-  `;
+  const creatorName = localStorage.getItem('luna_creator') || "Muhammed Jesin";
+  const creatorBatch = localStorage.getItem('luna_batch') || "CSE S3 A Batch";
 
   // Visualizer Animation
   const canvas = document.getElementById('visualizerCanvas');
@@ -452,6 +435,7 @@
     recognition.lang = 'en-US';
     recognition.continuous = false; 
     recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
 
     recognition.onstart = () => {
       isListening = true;
@@ -476,7 +460,7 @@
       }
 
       if (final) {
-        askAI(final.trim());
+        processQuery(final.trim());
       }
     };
 
@@ -493,30 +477,26 @@
 
   function startListeningSafe() {
     if (!recognition) return;
-    if (!isListening && !isSpeaking) {
+    if (!isListening && !isSpeaking && isPersonPresent) {
       try {
         recognition.start();
-      } catch (e) {
-        // Safe catch if instance is already active
-      }
+      } catch (e) {}
     }
   }
 
   function toggleManualVoice() {
     if (!recognition) return;
-    
     if (isListening) {
       recognition.stop();
     } else {
       window.speechSynthesis.cancel(); 
       isSpeaking = false;
-      startListeningSafe();
+      try { recognition.start(); } catch(e) {}
     }
   }
 
   async function setupCameraDetection() {
     const videoElement = document.getElementById('webcam');
-
     const faceDetection = new FaceDetection({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
     });
@@ -529,7 +509,6 @@
           clearTimeout(personLeaveTimeout);
           personLeaveTimeout = null;
         }
-
         if (!isPersonPresent) {
           isPersonPresent = true;
           onPersonArrive();
@@ -549,17 +528,14 @@
       width: 640,
       height: 480
     });
-
     camera.start();
   }
 
-  function onPersonArrive() {
+ function onPersonArrive() {
     updateUIStatus();
-    const greeting = `Hello, welcome to the Computer Science Department. I am LUNA, created by Muhammed Jesin from CSE S3 A Batch. How may I assist you today?`;
-    
+    const greeting = `Hello, welcome to the Computer Science Department. I am LUNA, created by ${creatorName} from ${creatorBatch}. Tap the voice button or screen to talk with me!`;
     document.getElementById("outputPanel").style.display = "block";
     document.getElementById("outputText").innerText = greeting;
-    
     speakText(greeting);
   }
 
@@ -568,7 +544,6 @@
     window.speechSynthesis.cancel();
     isSpeaking = false;
     isListening = false;
-    
     updateUIStatus();
     document.getElementById("outputPanel").style.display = "none";
     document.getElementById("mapPanel").style.display = "none";
@@ -600,30 +575,12 @@
     } else {
       dot.classList.add('active');
       text.innerText = "VISITOR DETECTED";
-      radarText.innerText = "LISTENING AUTOMATICALLY...";
+      radarText.innerText = "TAP MIC BUTTON OR SCREEN TO SPEAK"; // Fixed to match actual browser behavior
       micBtn.style.background = "rgba(255, 255, 255, 0.05)";
     }
   }
 
-  function checkCreatorQuery(query) {
-    const q = query.toLowerCase();
-    if (
-      q.includes("who created") || 
-      q.includes("who built") || 
-      q.includes("who is your creator") || 
-      q.includes("who made you") || 
-      q.includes("author") ||
-      q.includes("developer") ||
-      q.includes("who is luna") ||
-      q.includes("what is luna") ||
-      q.includes("who are you")
-    ) {
-      return `I am LUNA, a Logical Universal Navigation Assistant. I was proudly created and built by ${creatorName} from ${creatorBatch}!`;
-    }
-    return null;
-  }
-
-  async function askAI(spokenQuery) {
+  function processQuery(spokenQuery) {
     const query = spokenQuery || document.getElementById("userInput").value.trim();
     if (!query) return;
 
@@ -633,57 +590,36 @@
 
     const outputPanel = document.getElementById("outputPanel");
     const outputText = document.getElementById("outputText");
-
     outputPanel.style.display = "block";
-    
-    let aiReply = checkCreatorQuery(query);
-
-    if (!aiReply) {
-      outputText.innerText = "LUNA is processing query...";
-      try {
-        const promptText = encodeURIComponent(`${departmentContext}\n\nUser Question: ${query}`);
-        const res = await fetch(`https://text.pollinations.ai/${promptText}`);
-        const textResult = await res.text();
-        
-        if (textResult && !textResult.includes("error") && !textResult.includes("Turnstile")) {
-          aiReply = textResult;
-          if ((query.toLowerCase().includes("created") || query.toLowerCase().includes("built")) && !aiReply.toLowerCase().includes("muhammed jesin")) {
-            aiReply = `I was created and built by ${creatorName} from ${creatorBatch}!`;
-          }
-        } else {
-          aiReply = getLocalFallbackResponse(query);
-        }
-      } catch (err) {
-        aiReply = getLocalFallbackResponse(query);
-      }
-    }
-    
-    outputText.innerText = aiReply;
-    renderVisualMap(query);
-    speakText(aiReply);
-  }
-
-  function getLocalFallbackResponse(query) {
-    const forced = checkCreatorQuery(query);
-    if (forced) return forced;
+    outputText.innerText = "Processing query...";
 
     const q = query.toLowerCase();
-    if (q.includes("hod") || q.includes("johnson") || q.includes("001")) {
-      return "The HOD Office is located on the Ground Floor in Room 001, open from 9 AM to 5 PM.";
+    let reply = "";
+
+    // Instant Local Matching Engine (Guarantees 0 lag & high accuracy)
+    if (q.includes("who created") || q.includes("who built") || q.includes("creator") || q.includes("who made") || q.includes("author") || q.includes("developer")) {
+      reply = `I was proudly created, built, and authored by ${creatorName} from ${creatorBatch}!`;
+    } else if (q.includes("who is luna") || q.includes("what is luna") || q.includes("who are you")) {
+      reply = `I am LUNA, a Logical Universal Navigation Assistant designed to help visitors navigate the CSE department. I was built by ${creatorName} from ${creatorBatch}.`;
+    } else if (q.includes("hod") || q.includes("johnson") || q.includes("001")) {
+      reply = "The HOD Office is located on the Ground Floor in Room 001, open from 9 AM to 5 PM.";
     } else if (q.includes("smith") || q.includes("102") || q.includes("hardware")) {
-      return "Dr. Smith's office cabin is 102 on the 1st Floor, near the Hardware Lab 105.";
+      reply = "Dr. Smith's office cabin is 102 on the 1st Floor, and his schedule is available near Hardware Lab 105.";
     } else if (q.includes("lab 1") || q.includes("software")) {
-      return "Software Lab 1 is located on the 2nd Floor in Room 201.";
+      reply = "Software Lab 1 is located on the 2nd Floor in Room 201.";
     } else if (q.includes("restroom") || q.includes("washroom") || q.includes("toilet")) {
-      return "Restrooms are located on Ground Floor near entrance, 1st Floor by elevator, and 2nd Floor by stairs.";
+      reply = "Restrooms are located on the Ground Floor near the entrance, 1st Floor by the elevator, and 2nd Floor by the stairs.";
     } else {
-      return `I can assist you with locating faculty offices and labs in the CSE Department. I was proudly created by ${creatorName} from ${creatorBatch}!`;
+      reply = `I can assist you with locating faculty offices and labs in the CSE Department. I was built by ${creatorName} from ${creatorBatch}.`;
     }
+
+    outputText.innerText = reply;
+    renderVisualMap(query);
+    speakText(reply);
   }
 
   function speakText(text) {
     window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
 
@@ -695,18 +631,18 @@
     utterance.onend = () => {
       isSpeaking = false;
       updateUIStatus();
-      // Automatically start listening right after Luna finishes speaking!
-      if (isPersonPresent) {
-        setTimeout(startListeningSafe, 400);
-      }
+      // Safely queue micro-delay to restart listening immediately after speech ends
+      setTimeout(() => {
+        startListeningSafe();
+      }, 500);
     };
 
     utterance.onerror = () => {
       isSpeaking = false;
       updateUIStatus();
-      if (isPersonPresent) {
-        setTimeout(startListeningSafe, 400);
-      }
+      setTimeout(() => {
+        startListeningSafe();
+      }, 500);
     };
 
     window.speechSynthesis.speak(utterance);
@@ -714,16 +650,16 @@
 
   function quickAsk(text) {
     document.getElementById("userInput").value = text;
-    askAI(text);
+    processQuery(text);
   }
 
   function triggerManualAsk() {
-    askAI();
+    processQuery();
   }
 
   function handleKeyInput(event) {
     if (event.key === 'Enter') {
-      askAI();
+      processQuery();
     }
   }
 
