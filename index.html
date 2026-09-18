@@ -288,7 +288,7 @@
 
 <div class="kiosk-shell">
   <div class="top-bar">
-    <div class="system-id">// CSE DEPARTMENT KIOSK V4.0</div>
+    <div class="system-id">// CSE DEPARTMENT KIOSK V4.1</div>
     <div class="status-indicator">
       <span class="status-dot" id="statusDot"></span>
       <span id="statusText">LUNA STANDBY</span>
@@ -319,10 +319,9 @@
 
   <div class="section-label">Simulate Different Persons Arriving</div>
   <div class="chip-grid">
-    <button class="action-chip" onclick="simulateVisitor('Muhammed Jesin')">👋 Muhammed Jesin</button>
-    <button class="action-chip" onclick="simulateVisitor('Dr. Smith')">👋 Dr. Smith</button>
-    <button class="action-chip" onclick="simulateVisitor('Nasreen Ali')">👋 Nasreen Ali</button>
-    <button class="action-chip" onclick="simulateVisitor('Guest')">👋 General Guest</button>
+    <button class="action-chip" onclick="simulateVisitor('Dr. Smith')"> Dr. Smith</button>
+    <button class="action-chip" onclick="simulateVisitor('Nasreen Ali')"> Nasreen Ali</button>
+    <button class="action-chip" onclick="simulateVisitor('Guest')"> General Guest</button>
   </div>
 
   <div class="section-label">Quick Actions</div>
@@ -348,9 +347,10 @@
   let isPersonPresent = false;
   let isListening = false;
   let recognition = null;
+  let absenceTimer = null; // Timer for the 4-second delay
 
-  const creatorName = localStorage.getItem('luna_creator') || "Muhammed Jesin";
-  const creatorBatch = localStorage.getItem('luna_batch') || "CSE S3 A Batch";
+  const creatorName = "Muhammed Jesin";
+  const creatorBatch = "CSE S3 A Batch";
 
   function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -441,14 +441,24 @@
 
     faceDetection.onResults((results) => {
       if (results.detections.length > 0) {
+        // Face is detected: clear any pending absence timeout immediately
+        if (absenceTimer) {
+          clearTimeout(absenceTimer);
+          absenceTimer = null;
+        }
+
         if (!isPersonPresent) {
           isPersonPresent = true;
           onPersonArrive('Guest'); 
         }
       } else {
-        if (isPersonPresent) {
-          isPersonPresent = false;
-          onPersonLeave();
+        // Face is gone: start 4-second timeout before going to standby
+        if (isPersonPresent && !absenceTimer) {
+          absenceTimer = setTimeout(() => {
+            isPersonPresent = false;
+            onPersonLeave();
+            absenceTimer = null;
+          }, 4000); // 4000ms = 4 seconds
         }
       }
     });
@@ -465,11 +475,7 @@
     updateUIStatus();
     
     let greeting = "";
-    
-    // Clean, unique, and natural welcoming statements
-    if (visitorName === 'Muhammed Jesin') {
-      greeting = "OMG, yay! Muhammed Jesin, my creator is here! Welcome home, boss! I'm super excited to see you!";
-    } else if (visitorName === 'Dr. Smith') {
+    if (visitorName === 'Dr. Smith') {
       greeting = "Oh, hello! Welcome to the department, Dr. Smith! It is an absolute joy to have you here today!";
     } else if (visitorName === 'Nasreen Ali') {
       greeting = "Yay! Welcome, Nasreen Ali! Your favorite department assistant is so happy to see you!";
@@ -547,7 +553,6 @@
   function speakText(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Balanced high-energy profile (fast & cheerful without sounding frantic)
     utterance.rate = 1.2;  
     utterance.pitch = 1.5;  
     utterance.volume = 1.0;
