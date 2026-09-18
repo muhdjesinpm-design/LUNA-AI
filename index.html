@@ -159,7 +159,6 @@
       text-transform: uppercase;
     }
 
-    /* Input Box Styles */
     .input-box-container {
       width: 100%;
       display: flex;
@@ -201,7 +200,6 @@
 
     .send-btn:hover { opacity: 0.9; }
 
-    /* Live Transcript Display Box */
     .transcript-box {
       width: 100%;
       background: rgba(0, 0, 0, 0.25);
@@ -220,6 +218,17 @@
     .transcript-box span {
       color: var(--accent-cyan);
       margin-left: 8px;
+    }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      text-align: center;
+      width: 100%;
     }
 
     .chip-grid {
@@ -299,21 +308,26 @@
     <div class="interaction-cue" id="radarStatusText">TAP ORB OR TYPE BELOW TO INTERACT</div>
   </div>
 
-  <!-- Type Question Box -->
   <div class="input-box-container">
-    <input type="text" id="queryInput" class="query-input" placeholder="Ask Luna anything (e.g., Where is Nasreen miss?)..." onkeypress="handleKeyPress(event)">
+    <input type="text" id="queryInput" class="query-input" placeholder="Type visitor name or ask a question..." onkeypress="handleKeyPress(event)">
     <button class="send-btn" onclick="submitTypedQuery()">Ask Luna</button>
   </div>
 
-  <!-- Live Speech Transcript Box -->
   <div class="transcript-box">
     Live Speech: <span id="liveTranscript">Waiting for speech...</span>
   </div>
 
+  <div class="section-label">Simulate Different Persons Arriving</div>
   <div class="chip-grid">
-    <button class="action-chip" onclick="quickAsk('Who is Luna?')">Who is Luna?</button>
-    <button class="action-chip" onclick="quickAsk('Who built you?')">Who built you?</button>
-    <button class="action-chip" onclick="quickAsk('Nasreen Ali timetable')">Nasreen Ali Schedule</button>
+    <button class="action-chip" onclick="simulateVisitor('Muhammed Jesin')">👋 Muhammed Jesin</button>
+    <button class="action-chip" onclick="simulateVisitor('Dr. Smith')">👋 Dr. Smith</button>
+    <button class="action-chip" onclick="simulateVisitor('Nasreen Ali')">👋 Nasreen Ali</button>
+    <button class="action-chip" onclick="simulateVisitor('Guest')">👋 General Guest</button>
+  </div>
+
+  <div class="section-label">Quick Actions</div>
+  <div class="chip-grid">
+    <button class="action-chip" onclick="quickAsk('Come to my house!')">Invite to Home</button>
     <button class="action-chip" onclick="quickAsk('HOD Office')">HOD Office</button>
     <button class="action-chip" onclick="quickAsk('Restrooms')">Restrooms</button>
   </div>
@@ -345,7 +359,7 @@
     recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.continuous = false;
-    recognition.interimResults = true; // Captures words as you speak them!
+    recognition.interimResults = true;
 
     recognition.onresult = (e) => {
       let interimTranscript = '';
@@ -359,7 +373,6 @@
         }
       }
 
-      // Display every word live as it is spoken
       const currentSpeech = finalTranscript || interimTranscript;
       document.getElementById('liveTranscript').innerText = currentSpeech;
 
@@ -373,14 +386,8 @@
       updateUIStatus(); 
       document.getElementById('liveTranscript').innerText = "Listening...";
     };
-    recognition.onend = () => { 
-      isListening = false; 
-      updateUIStatus(); 
-    };
-    recognition.onerror = () => { 
-      isListening = false; 
-      updateUIStatus(); 
-    };
+    recognition.onend = () => { isListening = false; updateUIStatus(); };
+    recognition.onerror = () => { isListening = false; updateUIStatus(); };
   }
 
   function toggleManualVoice() {
@@ -393,13 +400,23 @@
     }
   }
 
+  function quickAsk(text) {
+    document.getElementById('liveTranscript').innerText = `Selected: "${text}"`;
+    processQuery(text);
+  }
+
+  function simulateVisitor(name) {
+    document.getElementById('liveTranscript').innerText = `Visitor Arrived: ${name}`;
+    onPersonArrive(name);
+  }
+
   function submitTypedQuery() {
     const inputField = document.getElementById('queryInput');
     const queryText = inputField.value.trim();
     if (queryText) {
       document.getElementById('liveTranscript').innerText = `Typed: "${queryText}"`;
       processQuery(queryText);
-      inputField.value = ''; // clear input box after submitting
+      inputField.value = '';
     }
   }
 
@@ -426,7 +443,7 @@
       if (results.detections.length > 0) {
         if (!isPersonPresent) {
           isPersonPresent = true;
-          onPersonArrive();
+          onPersonArrive('Guest'); 
         }
       } else {
         if (isPersonPresent) {
@@ -444,9 +461,22 @@
     camera.start();
   }
 
-  function onPersonArrive() {
+  function onPersonArrive(visitorName = 'Guest') {
     updateUIStatus();
-    const greeting = "Hello, welcome to the Computer Science Department. Type or speak to talk with me!";
+    
+    let greeting = "";
+    
+    // Clean, unique, and natural welcoming statements
+    if (visitorName === 'Muhammed Jesin') {
+      greeting = "OMG, yay! Muhammed Jesin, my creator is here! Welcome home, boss! I'm super excited to see you!";
+    } else if (visitorName === 'Dr. Smith') {
+      greeting = "Oh, hello! Welcome to the department, Dr. Smith! It is an absolute joy to have you here today!";
+    } else if (visitorName === 'Nasreen Ali') {
+      greeting = "Yay! Welcome, Nasreen Ali! Your favorite department assistant is so happy to see you!";
+    } else {
+      greeting = "Hi there! Welcome to the Computer Science Department! I am so thrilled to help you today!";
+    }
+
     document.getElementById("outputPanel").style.display = "block";
     document.getElementById("outputText").innerText = greeting;
     speakText(greeting);
@@ -490,20 +520,24 @@
     const q = query.toLowerCase();
     let reply = "";
 
-    if (q.includes("who created") || q.includes("who built") || q.includes("creator")) {
-      reply = `I was proudly created, built, and authored by ${creatorName} from ${creatorBatch}!`;
+    if (q.includes("invite") || q.includes("home") || q.includes("house") || q.includes("come over") || q.includes("visit")) {
+      reply = "Aw, yay! Thank you so much for the sweet invitation! I would love to come over, but I'm having way too much fun welcoming everyone right here in the department!";
+    } else if (q.includes("hello") || q.includes("hi ") || q.includes("hey")) {
+      reply = "Hi! It is so wonderful to talk with you today! How can I make your experience amazing?";
+    } else if (q.includes("who created") || q.includes("who built") || q.includes("creator")) {
+      reply = `Woohoo! I was proudly created, built, and authored by ${creatorName} from ${creatorBatch}! Isn't that incredible?!`;
     } else if (q.includes("who is luna") || q.includes("what is luna")) {
-      reply = `I am LUNA, a Logical Universal Navigation Assistant built by ${creatorName} from ${creatorBatch} to help visitors navigate the CSE department.`;
+      reply = `I am LUNA, your super-excited assistant built by ${creatorName} from ${creatorBatch} to help you navigate the department with a big smile!`;
     } else if (q.includes("nasreen") || q.includes("miss") || q.includes("ali") || q.includes("timetable") || q.includes("schedule")) {
-      reply = "Nasreen Ali teaches Design and Analysis of Algorithms (PCCST502) and Algorithmic Thinking with Python (UCEST105P). Her schedule includes classes for S5 CSE A, S5 CSE B, and S7 CSE A across the week.";
+      reply = "Nasreen Ali teaches Design and Analysis of Algorithms (PCCST502) and Algorithmic Thinking with Python (UCEST105P)! Her schedule includes awesome classes for S5 CSE A, S5 CSE B, and S7 CSE A!";
     } else if (q.includes("hod")) {
-      reply = "The HOD Office is located on the Ground Floor in Room 001.";
+      reply = "The HOD Office is right on the Ground Floor, in Room 001!";
     } else if (q.includes("smith")) {
-      reply = "Dr. Smith's office cabin is 102 on the 1st Floor.";
+      reply = "Dr. Smith's office cabin is room 102, located on the 1st Floor!";
     } else if (q.includes("restroom")) {
-      reply = "Restrooms are located on the Ground Floor near the entrance.";
+      reply = "Restrooms are on the Ground Floor, right near the main entrance!";
     } else {
-      reply = "I can assist you with locating faculty schedules, rooms, and labs in the CSE Department. How else can I help you?";
+      reply = "I would love to help you with that! Feel free to ask me anything about faculty schedules, room numbers, or directions!";
     }
 
     outputText.innerText = reply;
@@ -512,11 +546,33 @@
 
   function speakText(text) {
     const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Balanced high-energy profile (fast & cheerful without sounding frantic)
+    utterance.rate = 1.2;  
+    utterance.pitch = 1.5;  
+    utterance.volume = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find(v => 
+      v.lang.startsWith('en') && (
+        v.name.includes('Natural') || 
+        v.name.includes('Online') || 
+        v.name.includes('Google') || 
+        v.name.includes('Zira') || 
+        v.name.includes('Samantha') ||
+        v.name.includes('Hazel')
+      )
+    ) || voices.find(v => v.lang.startsWith('en'));
+
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
+    }
+
     window.speechSynthesis.speak(utterance);
   }
 
-  function quickAsk(text) {
-    processQuery(text);
+  if (typeof window.speechSynthesis !== 'undefined' && window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
   }
 
   window.onload = () => {
