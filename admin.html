@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUNA — Admin Control Center</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-main: #05070c;
+      --card-bg: rgba(13, 17, 23, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-cyan: #38bdf8;
+      --accent-purple: #818cf8;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --mono-font: 'JetBrains Mono', monospace;
+      --sans-font: 'Inter', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+      min-height: 100vh;
+      font-family: var(--sans-font);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+    }
+
+    .admin-container {
+      width: 100%;
+      max-width: 800px;
+      background: var(--card-bg);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      background: linear-gradient(135deg, #fff, var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      font-family: var(--mono-font);
+      font-size: 11px;
+      color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .section-title {
+      font-family: var(--mono-font);
+      font-size: 12px;
+      color: var(--accent-cyan);
+      letter-spacing: 1.5px;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      font-family: var(--mono-font);
+    }
+
+    input, textarea {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 14px;
+      color: var(--text-primary);
+      font-family: var(--sans-font);
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+    }
+
+    textarea { height: 120px; resize: vertical; }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-family: var(--mono-font);
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover { opacity: 0.9; transform: translateY(-2px); }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+
+    .error-msg {
+      color: var(--accent-rose);
+      font-family: var(--mono-font);
+      font-size: 12px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .status-msg {
+      margin-top: 15px;
+      font-family: var(--mono-font);
+      font-size: 12px;
+      color: var(--accent-emerald);
+      display: none;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 30px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-family: var(--mono-font);
+      font-size: 12px;
+    }
+    .back-link:hover { color: var(--accent-cyan); }
+
+    /* Hidden Sections */
+    #dashboardSection { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="admin-container">
+  
+  <!-- LOGIN VIEW -->
+  <div id="loginSection">
+    <div class="header">
+      <h1>ADMIN AUTHENTICATION</h1>
+      <span class="badge" style="color: var(--accent-cyan); background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.25);">RESTRICTED ACCESS</span>
+    </div>
+    
+    <div class="form-group">
+      <label>Admin Email</label>
+      <input type="email" id="loginEmail" placeholder="Enter admin email...">
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter password..." onkeydown="handleLoginKey(event)">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="attemptLogin()">LOGIN TO DASHBOARD</button>
+    </div>
+    
+    <div id="errorMsg" class="error-msg">Invalid credentials. Access denied.</div>
+    
+    <div>
+      <a href="index.html" class="back-link">← Return to Live Kiosk Interface</a>
+    </div>
+  </div>
+
+  <!-- DASHBOARD VIEW (Hidden until login succeeds) -->
+  <div id="dashboardSection">
+    <div class="header">
+      <h1>LUNA CONTROL PANEL</h1>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span class="badge">// AUTHENTICATED</span>
+        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 10px;" onclick="logout()">LOGOUT</button>
+      </div>
+    </div>
+
+    <div class="section-title">Department Prompt & Knowledge Settings</div>
+    
+    <div class="form-group">
+      <label>System Context & AI Dataset</label>
+      <textarea id="systemContextInput"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Author / Creator Name Override</label>
+      <input type="text" id="creatorNameInput">
+    </div>
+
+    <div class="form-group">
+      <label>Batch Details</label>
+      <input type="text" id="creatorBatchInput">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="saveSettings()">SAVE CONFIGURATION</button>
+      <button class="btn btn-secondary" onclick="resetDefaults()">RESET DEFAULTS</button>
+    </div>
+
+    <div id="statusMsg" class="status-msg">Configuration saved successfully!</div>
+
+    <div>
+      <a href="index.html" class="back-link">← Return to Live Kiosk Interface</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const correctEmail = "muhdjesinpm@gmail.com";
+  const correctPass = "Jesin@2006";
+
+  const defaultContext = `Your name is LUNA (Logical Universal Navigation Assistant). You are the autonomous AI receptionist and navigation guide for the Computer Science & Engineering (CSE) Department.
+    
+CRITICAL IDENTITY & CREATOR DETAILS:
+- Who created you / Who is your author / Who built you: I was created, built, and authored by Muhammed Jesin from CSE S3 A Batch.
+- Who are you: I am LUNA, a Logical Universal Navigation Assistant designed to help visitors navigate the department.
+
+Department Dataset:
+- HOD Room / Dr. Johnson: Ground Floor, Room 001. Hours: 9 AM - 5 PM.
+- Dr. Smith: Office Cabin 102 (1st Floor). 
+- Software Lab 1: 2nd Floor, Room 201.
+- Hardware Lab: 1st Floor, Room 105.
+- Restrooms: Ground Floor, 1st Floor, and 2nd Floor.`;
+
+  window.onload = () => {
+    // Check if already logged in during this browser session
+    if (sessionStorage.getItem('luna_admin_logged') === 'true') {
+      showDashboard();
+    }
+  };
+
+  function attemptLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errorMsg = document.getElementById('errorMsg');
+
+    if (email === correctEmail && pass === correctPass) {
+      sessionStorage.setItem('luna_admin_logged', 'true');
+      showDashboard();
+    } else {
+      errorMsg.style.display = 'block';
+    }
+  }
+
+  function handleLoginKey(e) {
+    if (e.key === 'Enter') {
+      attemptLogin();
+    }
+  }
+
+  function showDashboard() {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'block';
+
+    // Load saved or default values into fields
+    document.getElementById('systemContextInput').value = localStorage.getItem('luna_context') || defaultContext;
+    document.getElementById('creatorNameInput').value = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
+    document.getElementById('creatorBatchInput').value = localStorage.getItem('luna_batch') || 'CSE S3 A Batch';
+  }
+
+  function logout() {
+    sessionStorage.removeItem('luna_admin_logged');
+    location.reload();
+  }
+
+  function saveSettings() {
+    localStorage.setItem('luna_context', document.getElementById('systemContextInput').value);
+    localStorage.setItem('luna_creator', document.getElementById('creatorNameInput').value);
+    localStorage.setItem('luna_batch', document.getElementById('creatorBatchInput').value);
+
+    const msg = document.getElementById('statusMsg');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  }
+
+  function resetDefaults() {
+    localStorage.removeItem('luna_context');
+    localStorage.removeItem('luna_creator');
+    localStorage.removeItem('luna_batch');
+    location.reload();
+  }
+</script>
+
+</body>
+</html>

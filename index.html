@@ -62,7 +62,6 @@
       position: relative;
     }
 
-    /* System Status Header Bar */
     .system-status-bar {
       display: flex;
       justify-content: space-between;
@@ -115,7 +114,6 @@
       50% { opacity: 0.4; transform: scale(1.25); }
     }
 
-    /* Hero Branding Header */
     .hero-brand {
       text-align: center;
       margin-bottom: 24px;
@@ -156,7 +154,6 @@
       letter-spacing: 1px;
     }
 
-    /* Interactive Holographic Radar Ring */
     .visualizer-area {
       display: flex;
       flex-direction: column;
@@ -178,9 +175,9 @@
       color: var(--text-muted);
       letter-spacing: 1.5px;
       text-transform: uppercase;
+      text-align: center;
     }
 
-    /* Fast Action Chips */
     .quick-chips {
       display: flex;
       gap: 10px;
@@ -208,7 +205,6 @@
       transform: translateY(-2px);
     }
 
-    /* Command Input Wrapper */
     .input-wrapper {
       display: flex;
       gap: 10px;
@@ -268,7 +264,6 @@
       transform: scale(1.02);
     }
 
-    /* Response Output Box */
     .output-panel {
       margin-top: 24px;
       background: rgba(0, 0, 0, 0.4);
@@ -294,7 +289,6 @@
       font-weight: 400;
     }
 
-    /* SVG Schematic Panel */
     .map-panel {
       margin-top: 16px;
       background: rgba(0, 0, 0, 0.4);
@@ -319,31 +313,27 @@
 
 <div class="kiosk-container">
   
-  <!-- System Metadata Status Bar -->
   <div class="system-status-bar">
-    <span class="system-tag">// CSE DEPARTMENT KIOSK V3.2</span>
+    <span class="system-tag">// CSE DEPARTMENT KIOSK V3.4</span>
     <div class="system-status">
       <div id="statusDot" class="status-dot"></div>
       <span id="statusText">LUNA STANDBY</span>
     </div>
   </div>
 
-  <!-- Hero Branding Header -->
   <div class="hero-brand">
     <h1 class="hero-title">LUNA</h1>
     <p class="hero-subtitle">LOGICAL UNIVERSAL NAVIGATION ASSISTANT</p>
     <div class="hero-creator-badge">CREATED BY MUHAMMED JESIN (CSE S3 A BATCH)</div>
   </div>
 
-  <!-- Audio Orb & Radar Visualizer -->
   <div class="visualizer-area">
-    <canvas id="visualizerCanvas" width="320" height="320" onclick="toggleListeningState()" title="Click to toggle mic"></canvas>
-    <div id="radarStatusText" class="radar-text">SCANNING FOR APPROACHING VISITORS</div>
+    <canvas id="visualizerCanvas" width="320" height="320" onclick="toggleManualVoice()" title="Click to toggle mic"></canvas>
+    <div id="radarStatusText" class="radar-text">CLICK VOICE OR TYPE TO SPEAK</div>
   </div>
 
   <video id="webcam" autoplay playsinline muted></video>
 
-  <!-- Quick Action Chips -->
   <div class="quick-chips">
     <button class="chip" onclick="quickAsk('Who is Luna?')">✨ Who is Luna?</button>
     <button class="chip" onclick="quickAsk('Who created you?')">🛠️ Who built you?</button>
@@ -352,20 +342,17 @@
     <button class="chip" onclick="quickAsk('Where are the restrooms?')">🚻 Restrooms</button>
   </div>
 
-  <!-- Input Wrapper -->
   <div class="input-wrapper">
-    <input type="text" id="userInput" placeholder="Speak out loud to talk with Luna or type here..." onkeydown="handleKeyInput(event)">
+    <input type="text" id="userInput" placeholder="Type or click voice to talk with Luna..." onkeydown="handleKeyInput(event)">
     <button id="micBtn" class="btn" onclick="toggleManualVoice()">🎤 VOICE</button>
     <button class="btn btn-primary" onclick="triggerManualAsk()">ASK LUNA</button>
   </div>
 
-  <!-- Response Panel -->
   <div id="outputPanel" class="output-panel">
     <div class="output-header">// LUNA INTELLIGENCE RESPONSE</div>
     <div id="outputText" class="output-text">Processing request...</div>
   </div>
 
-  <!-- Schematic Navigation Map -->
   <div id="mapPanel" class="map-panel">
     <div id="mapTitle" class="map-title">FLOOR PLAN SCHEMATIC</div>
     <div id="svgContainer"></div>
@@ -379,7 +366,6 @@
   let isSpeaking = false;
   let recognition = null;
   let personLeaveTimeout = null;
-  let finalTranscript = '';
 
   const creatorName = "Muhammed Jesin";
   const creatorBatch = "CSE S3 A Batch";
@@ -413,14 +399,12 @@
     const centerY = canvas.height / 2;
     const radius = 50;
 
-    // Outer Glow Ring
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Primary Core Orb Ring
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     if (isSpeaking) {
@@ -446,7 +430,6 @@
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Radar Scanning Needle
     const needleX = centerX + Math.cos(angle) * (radius + 20);
     const needleY = centerY + Math.sin(angle) * (radius + 20);
     ctx.beginPath();
@@ -467,7 +450,7 @@
 
     recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
-    recognition.continuous = true;
+    recognition.continuous = false; 
     recognition.interimResults = true;
 
     recognition.onstart = () => {
@@ -477,32 +460,23 @@
 
     recognition.onresult = (e) => {
       let interim = '';
-      finalTranscript = '';
+      let final = '';
 
       for (let i = e.resultIndex; i < e.results.length; ++i) {
         if (e.results[i].isFinal) {
-          finalTranscript += e.results[i][0].transcript;
+          final += e.results[i][0].transcript;
         } else {
           interim += e.results[i][0].transcript;
         }
       }
 
-      const currentSpeech = finalTranscript || interim;
-      if (currentSpeech.trim()) {
-        document.getElementById("userInput").value = currentSpeech;
-        
-        // IMMEDIATE BARGE-IN: If Luna is currently talking and the user starts speaking, cut her off instantly!
-        if (isSpeaking) {
-          window.speechSynthesis.cancel();
-          isSpeaking = false;
-        }
+      const text = final || interim;
+      if (text) {
+        document.getElementById("userInput").value = text;
       }
 
-      // Automatically submit query once a clear phrase is spoken
-      if (finalTranscript.trim().length > 2) {
-        const queryText = finalTranscript.trim();
-        finalTranscript = ''; // Reset transcript
-        askAI(queryText);
+      if (final) {
+        askAI(final.trim());
       }
     };
 
@@ -514,38 +488,30 @@
     recognition.onend = () => {
       isListening = false;
       updateUIStatus();
-      // Restart listening loop if person is present and Luna isn't speaking
-      if (isPersonPresent && !isSpeaking) {
-        setTimeout(startAutoListening, 500);
-      }
     };
   }
 
-  function startAutoListening() {
-    if (recognition && !isListening && !isSpeaking && isPersonPresent) {
-      try { recognition.start(); } catch (e) { }
-    }
-  }
-
-  function stopAutoListening() {
-    if (recognition && isListening) {
-      try { recognition.stop(); } catch (e) { }
-      isListening = false;
+  function startListeningSafe() {
+    if (!recognition) return;
+    if (!isListening && !isSpeaking) {
+      try {
+        recognition.start();
+      } catch (e) {
+        // Safe catch if instance is already active
+      }
     }
   }
 
   function toggleManualVoice() {
+    if (!recognition) return;
+    
     if (isListening) {
-      stopAutoListening();
+      recognition.stop();
     } else {
-      window.speechSynthesis.cancel();
+      window.speechSynthesis.cancel(); 
       isSpeaking = false;
-      startAutoListening();
+      startListeningSafe();
     }
-  }
-
-  function toggleListeningState() {
-    toggleManualVoice();
   }
 
   async function setupCameraDetection() {
@@ -555,7 +521,7 @@
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
     });
 
-    faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.6 });
+    faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.65 });
 
     faceDetection.onResults((results) => {
       if (results.detections.length > 0) {
@@ -598,7 +564,7 @@
   }
 
   function onPersonLeave() {
-    stopAutoListening();
+    if (recognition && isListening) recognition.stop();
     window.speechSynthesis.cancel();
     isSpeaking = false;
     isListening = false;
@@ -624,7 +590,7 @@
     } else if (isSpeaking) {
       dot.classList.add('listening');
       text.innerText = "LUNA TRANSMITTING";
-      radarText.innerText = "VOICE RESPONSE IN PROGRESS (SPEAK TO INTERRUPT)";
+      radarText.innerText = "SPEAK TO INTERRUPT OR TYPE BELOW";
       micBtn.style.background = "rgba(255, 255, 255, 0.05)";
     } else if (isListening) {
       dot.classList.add('listening');
@@ -634,12 +600,11 @@
     } else {
       dot.classList.add('active');
       text.innerText = "VISITOR DETECTED";
-      radarText.innerText = "CLICK MIC OR ORB TO SPEAK";
+      radarText.innerText = "LISTENING AUTOMATICALLY...";
       micBtn.style.background = "rgba(255, 255, 255, 0.05)";
     }
   }
 
-  // FORCE OVERRIDE HANDLER FOR CREATOR QUESTIONS
   function checkCreatorQuery(query) {
     const q = query.toLowerCase();
     if (
@@ -662,10 +627,9 @@
     const query = spokenQuery || document.getElementById("userInput").value.trim();
     if (!query) return;
 
-    // Hard cancel any ongoing voice output immediately
     window.speechSynthesis.cancel();
     isSpeaking = false;
-    stopAutoListening();
+    if (recognition && isListening) recognition.stop();
 
     const outputPanel = document.getElementById("outputPanel");
     const outputText = document.getElementById("outputText");
@@ -711,7 +675,7 @@
     } else if (q.includes("lab 1") || q.includes("software")) {
       return "Software Lab 1 is located on the 2nd Floor in Room 201.";
     } else if (q.includes("restroom") || q.includes("washroom") || q.includes("toilet")) {
-      return "Restrooms are located on the Ground Floor near the entrance, 1st Floor by the elevator, and 2nd Floor by the stairs.";
+      return "Restrooms are located on Ground Floor near entrance, 1st Floor by elevator, and 2nd Floor by stairs.";
     } else {
       return `I can assist you with locating faculty offices and labs in the CSE Department. I was proudly created by ${creatorName} from ${creatorBatch}!`;
     }
@@ -731,22 +695,21 @@
     utterance.onend = () => {
       isSpeaking = false;
       updateUIStatus();
+      // Automatically start listening right after Luna finishes speaking!
       if (isPersonPresent) {
-        setTimeout(startAutoListening, 300);
+        setTimeout(startListeningSafe, 400);
       }
     };
 
     utterance.onerror = () => {
       isSpeaking = false;
       updateUIStatus();
+      if (isPersonPresent) {
+        setTimeout(startListeningSafe, 400);
+      }
     };
 
     window.speechSynthesis.speak(utterance);
-    
-    // Keep recognition active in the background so it can catch voice interruptions immediately
-    if (recognition && isPersonPresent && !isListening) {
-      try { recognition.start(); } catch(e) {}
-    }
   }
 
   function quickAsk(text) {
