@@ -168,6 +168,7 @@
     #visualizerCanvas {
       width: 160px;
       height: 160px;
+      cursor: pointer;
     }
 
     .radar-text {
@@ -320,7 +321,7 @@
   
   <!-- System Metadata Status Bar -->
   <div class="system-status-bar">
-    <span class="system-tag">// CSE DEPARTMENT KIOSK V3.0</span>
+    <span class="system-tag">// CSE DEPARTMENT KIOSK V3.2</span>
     <div class="system-status">
       <div id="statusDot" class="status-dot"></div>
       <span id="statusText">LUNA STANDBY</span>
@@ -336,7 +337,7 @@
 
   <!-- Audio Orb & Radar Visualizer -->
   <div class="visualizer-area">
-    <canvas id="visualizerCanvas" width="320" height="320"></canvas>
+    <canvas id="visualizerCanvas" width="320" height="320" onclick="toggleListeningState()" title="Click to toggle mic"></canvas>
     <div id="radarStatusText" class="radar-text">SCANNING FOR APPROACHING VISITORS</div>
   </div>
 
@@ -353,9 +354,9 @@
 
   <!-- Input Wrapper -->
   <div class="input-wrapper">
-    <input type="text" id="userInput" placeholder="Speak out loud to talk with Luna or type here...">
-    <button class="btn" onclick="startManualVoice()">🎤 VOICE</button>
-    <button class="btn btn-primary" onclick="askAI()">ASK LUNA</button>
+    <input type="text" id="userInput" placeholder="Speak out loud to talk with Luna or type here..." onkeydown="handleKeyInput(event)">
+    <button id="micBtn" class="btn" onclick="toggleManualVoice()">🎤 VOICE</button>
+    <button class="btn btn-primary" onclick="triggerManualAsk()">ASK LUNA</button>
   </div>
 
   <!-- Response Panel -->
@@ -378,6 +379,7 @@
   let isSpeaking = false;
   let recognition = null;
   let personLeaveTimeout = null;
+  let finalTranscript = '';
 
   const creatorName = "Muhammed Jesin";
   const creatorBatch = "CSE S3 A Batch";
@@ -465,8 +467,8 @@
 
     recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
 
     recognition.onstart = () => {
       isListening = true;
@@ -474,23 +476,47 @@
     };
 
     recognition.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      document.getElementById("userInput").value = transcript;
-      isListening = false;
-      askAI(transcript);
+      let interim = '';
+      finalTranscript = '';
+
+      for (let i = e.resultIndex; i < e.results.length; ++i) {
+        if (e.results[i].isFinal) {
+          finalTranscript += e.results[i][0].transcript;
+        } else {
+          interim += e.results[i][0].transcript;
+        }
+      }
+
+      const currentSpeech = finalTranscript || interim;
+      if (currentSpeech.trim()) {
+        document.getElementById("userInput").value = currentSpeech;
+        
+        // IMMEDIATE BARGE-IN: If Luna is currently talking and the user starts speaking, cut her off instantly!
+        if (isSpeaking) {
+          window.speechSynthesis.cancel();
+          isSpeaking = false;
+        }
+      }
+
+      // Automatically submit query once a clear phrase is spoken
+      if (finalTranscript.trim().length > 2) {
+        const queryText = finalTranscript.trim();
+        finalTranscript = ''; // Reset transcript
+        askAI(queryText);
+      }
     };
 
     recognition.onerror = () => {
       isListening = false;
-      if (isPersonPresent && !isSpeaking) setTimeout(startAutoListening, 1000);
+      updateUIStatus();
     };
 
     recognition.onend = () => {
       isListening = false;
+      updateUIStatus();
+      // Restart listening loop if person is present and Luna isn't speaking
       if (isPersonPresent && !isSpeaking) {
-        setTimeout(startAutoListening, 1000);
-      } else {
-        updateUIStatus();
+        setTimeout(startAutoListening, 500);
       }
     };
   }
@@ -503,9 +529,23 @@
 
   function stopAutoListening() {
     if (recognition && isListening) {
-      recognition.stop();
+      try { recognition.stop(); } catch (e) { }
       isListening = false;
     }
+  }
+
+  function toggleManualVoice() {
+    if (isListening) {
+      stopAutoListening();
+    } else {
+      window.speechSynthesis.cancel();
+      isSpeaking = false;
+      startAutoListening();
+    }
+  }
+
+  function toggleListeningState() {
+    toggleManualVoice();
   }
 
   async function setupCameraDetection() {
@@ -533,7 +573,7 @@
           personLeaveTimeout = setTimeout(() => {
             isPersonPresent = false;
             onPersonLeave();
-          }, 5000); // 5 seconds reset delay
+          }, 5000);
         }
       }
     });
@@ -573,24 +613,29 @@
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     const radarText = document.getElementById('radarStatusText');
+    const micBtn = document.getElementById('micBtn');
 
     dot.className = 'status-dot';
 
     if (!isPersonPresent) {
       text.innerText = "LUNA STANDBY";
       radarText.innerText = "SCANNING FOR APPROACHING VISITORS";
+      micBtn.style.background = "rgba(255, 255, 255, 0.05)";
     } else if (isSpeaking) {
       dot.classList.add('listening');
       text.innerText = "LUNA TRANSMITTING";
-      radarText.innerText = "VOICE RESPONSE IN PROGRESS";
+      radarText.innerText = "VOICE RESPONSE IN PROGRESS (SPEAK TO INTERRUPT)";
+      micBtn.style.background = "rgba(255, 255, 255, 0.05)";
     } else if (isListening) {
       dot.classList.add('listening');
       text.innerText = "LUNA LISTENING";
-      radarText.innerText = "LISTENING FOR YOUR QUERY";
+      radarText.innerText = "LISTENING... SPEAK NOW";
+      micBtn.style.background = "rgba(56, 189, 248, 0.2)";
     } else {
       dot.classList.add('active');
       text.innerText = "VISITOR DETECTED";
-      radarText.innerText = "LUNA IS READY FOR COMMAND";
+      radarText.innerText = "CLICK MIC OR ORB TO SPEAK";
+      micBtn.style.background = "rgba(255, 255, 255, 0.05)";
     }
   }
 
@@ -617,12 +662,16 @@
     const query = spokenQuery || document.getElementById("userInput").value.trim();
     if (!query) return;
 
+    // Hard cancel any ongoing voice output immediately
+    window.speechSynthesis.cancel();
+    isSpeaking = false;
+    stopAutoListening();
+
     const outputPanel = document.getElementById("outputPanel");
     const outputText = document.getElementById("outputText");
 
     outputPanel.style.display = "block";
     
-    // Check if the query is asking about the creator/author first
     let aiReply = checkCreatorQuery(query);
 
     if (!aiReply) {
@@ -634,7 +683,6 @@
         
         if (textResult && !textResult.includes("error") && !textResult.includes("Turnstile")) {
           aiReply = textResult;
-          // Safety double check in case AI still missed naming the creator
           if ((query.toLowerCase().includes("created") || query.toLowerCase().includes("built")) && !aiReply.toLowerCase().includes("muhammed jesin")) {
             aiReply = `I was created and built by ${creatorName} from ${creatorBatch}!`;
           }
@@ -671,7 +719,6 @@
 
   function speakText(text) {
     window.speechSynthesis.cancel();
-    stopAutoListening();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
@@ -684,19 +731,37 @@
     utterance.onend = () => {
       isSpeaking = false;
       updateUIStatus();
-      if (isPersonPresent) setTimeout(startAutoListening, 500);
+      if (isPersonPresent) {
+        setTimeout(startAutoListening, 300);
+      }
+    };
+
+    utterance.onerror = () => {
+      isSpeaking = false;
+      updateUIStatus();
     };
 
     window.speechSynthesis.speak(utterance);
-  }
-
-  function startManualVoice() {
-    if (recognition) recognition.start();
+    
+    // Keep recognition active in the background so it can catch voice interruptions immediately
+    if (recognition && isPersonPresent && !isListening) {
+      try { recognition.start(); } catch(e) {}
+    }
   }
 
   function quickAsk(text) {
     document.getElementById("userInput").value = text;
     askAI(text);
+  }
+
+  function triggerManualAsk() {
+    askAI();
+  }
+
+  function handleKeyInput(event) {
+    if (event.key === 'Enter') {
+      askAI();
+    }
   }
 
   function renderVisualMap(query) {
