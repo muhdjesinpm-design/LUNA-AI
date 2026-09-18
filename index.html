@@ -3,91 +3,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LUNA — Autonomous Campus Receptionist</title>
+  <title>LUNA — Autonomous Navigation Kiosk</title>
   
-  <!-- MediaPipe Face Detection Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
-  
-  <!-- Enterprise & Tech Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --bg-main: #05070c;
-      --card-bg: rgba(13, 17, 23, 0.85);
-      --card-border: rgba(255, 255, 255, 0.08);
+      --bg-deep: #030712;
+      --surface-glass: rgba(13, 17, 23, 0.85);
+      --border-glass: rgba(255, 255, 255, 0.08);
       --accent-cyan: #38bdf8;
-      --accent-glow: rgba(56, 189, 248, 0.2);
       --accent-purple: #818cf8;
       --accent-emerald: #10b981;
       --text-primary: #f8fafc;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
-      --mono-font: 'JetBrains Mono', monospace;
-      --sans-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background-color: var(--bg-main);
+      background-color: var(--bg-deep);
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12) 0%, transparent 70%),
-        linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px),
-        linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px);
-      background-size: 100% 100%, 40px 40px, 40px 40px;
+        radial-gradient(circle at 50% 20%, rgba(56, 189, 248, 0.07) 0%, transparent 60%),
+        linear-gradient(to bottom, #030712, #020617);
       min-height: 100vh;
+      font-family: var(--font-sans);
+      color: var(--text-primary);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: var(--sans-font);
-      color: var(--text-primary);
-      padding: 24px;
-      -webkit-font-smoothing: antialiased;
+      padding: 40px 20px;
     }
 
-    .kiosk-container {
+    .kiosk-shell {
       width: 100%;
       max-width: 900px;
-      background: var(--card-bg);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid var(--card-border);
-      border-radius: 24px;
-      padding: 40px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(56, 189, 248, 0.05);
-      position: relative;
+      background: var(--surface-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-glass);
+      border-radius: 32px;
+      padding: 48px;
+      box-shadow: 0 30px 100px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    .system-status-bar {
+    .top-bar {
+      width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 30px;
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 20px;
     }
 
-    .system-tag {
-      font-family: var(--mono-font);
+    .system-id {
+      font-family: var(--font-mono);
       font-size: 11px;
       letter-spacing: 2px;
-      color: var(--accent-cyan);
-      background: rgba(56, 189, 248, 0.1);
-      border: 1px solid rgba(56, 189, 248, 0.2);
-      padding: 4px 12px;
-      border-radius: 20px;
+      color: var(--text-muted);
+      text-transform: uppercase;
     }
 
-    .system-status {
+    .status-indicator {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-family: var(--mono-font);
+      font-family: var(--font-mono);
       font-size: 11px;
-      color: var(--text-secondary);
       letter-spacing: 1px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glass);
+      padding: 6px 14px;
+      border-radius: 20px;
     }
 
     .status-dot {
@@ -95,216 +91,185 @@
       height: 8px;
       border-radius: 50%;
       background: var(--text-muted);
-      transition: all 0.3s ease;
     }
+    .status-dot.active { background: var(--accent-emerald); box-shadow: 0 0 12px var(--accent-emerald); }
+    .status-dot.listening { background: var(--accent-cyan); box-shadow: 0 0 15px var(--accent-cyan); }
 
-    .status-dot.active {
-      background: var(--accent-emerald);
-      box-shadow: 0 0 10px var(--accent-emerald);
-    }
-
-    .status-dot.listening {
-      background: var(--accent-cyan);
-      box-shadow: 0 0 12px var(--accent-cyan);
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.25); }
-    }
-
-    .hero-brand {
+    .hero-block {
       text-align: center;
-      margin-bottom: 24px;
-    }
-
-    .hero-title {
-      font-size: 56px;
-      font-weight: 900;
-      letter-spacing: 8px;
-      background: linear-gradient(135deg, #ffffff 30%, #38bdf8 70%, #818cf8 100%);
-      -webkit-background-clip: text;
-      background-clip: text; /* Added this line to fix the warning */
-      -webkit-text-fill-color: transparent;
-      line-height: 1;
-      text-transform: uppercase;
-      filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.25));
-    }
-
-    .hero-subtitle {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      letter-spacing: 3px;
-      margin-top: 10px;
-      text-transform: uppercase;
-      font-family: var(--mono-font);
-    }
-
-    .hero-creator-badge {
-      display: inline-block;
-      margin-top: 12px;
-      font-family: var(--mono-font);
-      font-size: 12px;
-      color: var(--accent-emerald);
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      padding: 6px 16px;
-      border-radius: 20px;
-      letter-spacing: 1px;
-    }
-
-    .visualizer-area {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 10px 0 24px;
+      width: 100%;
+      margin-bottom: 15px;
     }
 
-    #visualizerCanvas {
-      width: 160px;
-      height: 160px;
-      cursor: pointer;
-    }
-
-    .radar-text {
-      margin-top: 14px;
-      font-family: var(--mono-font);
+    .brand-subtitle {
+      font-family: var(--font-mono);
       font-size: 12px;
-      color: var(--text-muted);
-      letter-spacing: 1.5px;
+      letter-spacing: 4px;
+      color: var(--accent-cyan);
+      margin-bottom: 8px;
       text-transform: uppercase;
-      text-align: center;
     }
 
-    .quick-chips {
+    .hero-title {
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: 10px;
+      background: linear-gradient(135deg, #ffffff 20%, var(--accent-cyan) 60%, var(--accent-purple) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    .orb-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
       display: flex;
-      gap: 10px;
+      align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+
+    .orb-button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(129, 140, 248, 0.2));
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-cyan);
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+    }
+
+    .interaction-cue {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    /* Input Box Styles */
+    .input-box-container {
+      width: 100%;
+      display: flex;
+      gap: 12px;
       margin-bottom: 24px;
     }
 
-    .chip {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: var(--text-secondary);
-      padding: 8px 18px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .chip:hover {
-      background: var(--accent-glow);
-      border-color: rgba(56, 189, 248, 0.4);
-      color: var(--accent-cyan);
-      transform: translateY(-2px);
-    }
-
-    .input-wrapper {
-      display: flex;
-      gap: 10px;
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 14px;
-      padding: 6px;
-      transition: all 0.2s;
-    }
-
-    .input-wrapper:focus-within {
-      border-color: rgba(56, 189, 248, 0.6);
-      box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
-    }
-
-    input {
+    .query-input {
       flex: 1;
-      background: transparent;
-      border: none;
-      padding: 14px 18px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-glass);
+      border-radius: 14px;
+      padding: 14px 20px;
       color: var(--text-primary);
-      font-family: var(--sans-font);
+      font-family: var(--font-sans);
       font-size: 15px;
       outline: none;
+      transition: all 0.2s ease;
     }
 
-    input::placeholder { color: var(--text-muted); }
+    .query-input:focus {
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(255, 255, 255, 0.07);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+    }
 
-    .btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: var(--text-primary);
-      padding: 0 20px;
-      border-radius: 10px;
-      font-family: var(--mono-font);
-      font-size: 12px;
-      font-weight: 600;
+    .send-btn {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      border: none;
+      border-radius: 14px;
+      color: var(--bg-deep);
+      font-weight: 700;
+      padding: 0 24px;
       cursor: pointer;
-      transition: all 0.2s;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      transition: opacity 0.2s ease;
+    }
+
+    .send-btn:hover { opacity: 0.9; }
+
+    /* Live Transcript Display Box */
+    .transcript-box {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px dashed var(--border-glass);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 24px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-secondary);
+      min-height: 44px;
       display: flex;
       align-items: center;
-      gap: 6px;
     }
 
-    .btn:hover { background: rgba(255, 255, 255, 0.1); }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-      color: #000;
-      font-weight: 700;
-      border: none;
-    }
-
-    .btn-primary:hover {
-      opacity: 0.95;
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
-      transform: scale(1.02);
-    }
-
-    .output-panel {
-      margin-top: 24px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      border-radius: 14px;
-      padding: 22px;
-      display: none;
-    }
-
-    .output-header {
-      font-family: var(--mono-font);
-      font-size: 11px;
+    .transcript-box span {
       color: var(--accent-cyan);
-      letter-spacing: 1.5px;
-      margin-bottom: 8px;
-      font-weight: 700;
+      margin-left: 8px;
     }
 
-    .output-text {
-      font-size: 16px;
+    .chip-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .action-chip {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glass);
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .action-chip:hover {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: var(--accent-cyan);
+    }
+
+    .response-card {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 20px;
+      padding: 24px;
+      display: none;
+      text-align: left;
+    }
+
+    .card-header-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--accent-cyan);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .card-body-text {
+      font-size: 15px;
       line-height: 1.6;
       color: var(--text-primary);
-      font-weight: 400;
-    }
-
-    .map-panel {
-      margin-top: 16px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      padding: 18px;
-      display: none;
-    }
-
-    .map-title {
-      font-family: var(--mono-font);
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      letter-spacing: 1px;
     }
 
     #webcam { display: none; }
@@ -312,120 +277,66 @@
 </head>
 <body>
 
-<div class="kiosk-container">
-  
-  <div class="system-status-bar">
-    <span class="system-tag">// CSE DEPARTMENT KIOSK V3.4</span>
-    <div class="system-status">
-      <div id="statusDot" class="status-dot"></div>
+<div class="kiosk-shell">
+  <div class="top-bar">
+    <div class="system-id">// CSE DEPARTMENT KIOSK V4.0</div>
+    <div class="status-indicator">
+      <span class="status-dot" id="statusDot"></span>
       <span id="statusText">LUNA STANDBY</span>
     </div>
   </div>
 
-  <div class="hero-brand">
+  <div class="hero-block">
+    <div class="brand-subtitle">Logical Universal Navigation Assistant</div>
     <h1 class="hero-title">LUNA</h1>
-    <p class="hero-subtitle">LOGICAL UNIVERSAL NAVIGATION ASSISTANT</p>
-    <div class="hero-creator-badge">CREATED BY MUHAMMED JESIN (CSE S3 A BATCH)</div>
+    
+    <div class="orb-container" onclick="toggleManualVoice()">
+      <div class="orb-button" id="micBtn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      </div>
+    </div>
+    
+    <div class="interaction-cue" id="radarStatusText">TAP ORB OR TYPE BELOW TO INTERACT</div>
   </div>
 
-  <div class="visualizer-area">
-    <canvas id="visualizerCanvas" width="320" height="320" onclick="toggleManualVoice()" title="Click to toggle mic"></canvas>
-    <div id="radarStatusText" class="radar-text">CLICK VOICE OR TYPE TO SPEAK</div>
+  <!-- Type Question Box -->
+  <div class="input-box-container">
+    <input type="text" id="queryInput" class="query-input" placeholder="Ask Luna anything (e.g., Where is Nasreen miss?)..." onkeypress="handleKeyPress(event)">
+    <button class="send-btn" onclick="submitTypedQuery()">Ask Luna</button>
   </div>
 
-  <video id="webcam" autoplay playsinline muted></video>
-
-  <div class="quick-chips">
-    <button class="chip" onclick="quickAsk('Who is Luna?')"> Who is Luna?</button>
-    <button class="chip" onclick="quickAsk('Who created you?')"> Who built you?</button>
-    <button class="chip" onclick="quickAsk('Where is HOD room?')"> HOD Office</button>
-    <button class="chip" onclick="quickAsk('Where is Dr. Smith?')"> Dr. Smith</button>
-    <button class="chip" onclick="quickAsk('Where are the restrooms?')"> Restrooms</button>
+  <!-- Live Speech Transcript Box -->
+  <div class="transcript-box">
+    Live Speech: <span id="liveTranscript">Waiting for speech...</span>
   </div>
 
-  <div class="input-wrapper">
-    <input type="text" id="userInput" placeholder="Type or click voice to talk with Luna..." onkeydown="handleKeyInput(event)">
-    <button id="micBtn" class="btn" onclick="toggleManualVoice()">🎤 VOICE</button>
-    <button class="btn btn-primary" onclick="triggerManualAsk()">ASK LUNA</button>
+  <div class="chip-grid">
+    <button class="action-chip" onclick="quickAsk('Who is Luna?')">Who is Luna?</button>
+    <button class="action-chip" onclick="quickAsk('Who built you?')">Who built you?</button>
+    <button class="action-chip" onclick="quickAsk('Nasreen Ali timetable')">Nasreen Ali Schedule</button>
+    <button class="action-chip" onclick="quickAsk('HOD Office')">HOD Office</button>
+    <button class="action-chip" onclick="quickAsk('Restrooms')">Restrooms</button>
   </div>
 
-  <div id="outputPanel" class="output-panel">
-    <div class="output-header">// LUNA INTELLIGENCE RESPONSE</div>
-    <div id="outputText" class="output-text">Processing request...</div>
+  <div class="response-card" id="outputPanel">
+    <div class="card-header-label">// LUNA INTELLIGENCE RESPONSE</div>
+    <div class="card-body-text" id="outputText"></div>
   </div>
 
-  <div id="mapPanel" class="map-panel">
-    <div id="mapTitle" class="map-title">FLOOR PLAN SCHEMATIC</div>
-    <div id="svgContainer"></div>
-  </div>
-
+  <video id="webcam" autoplay playsinline></video>
 </div>
+
+<!-- Load MediaPipe safely -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 
 <script>
   let isPersonPresent = false;
   let isListening = false;
-  let isSpeaking = false;
   let recognition = null;
-  let personLeaveTimeout = null;
 
   const creatorName = localStorage.getItem('luna_creator') || "Muhammed Jesin";
   const creatorBatch = localStorage.getItem('luna_batch') || "CSE S3 A Batch";
-
-  // Visualizer Animation
-  const canvas = document.getElementById('visualizerCanvas');
-  const ctx = canvas.getContext('2d');
-  let angle = 0;
-
-  function drawVisualizer() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = 50;
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    if (isSpeaking) {
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 4;
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = 20;
-    } else if (isListening) {
-      ctx.strokeStyle = '#818cf8';
-      ctx.lineWidth = 3;
-      ctx.shadowColor = '#818cf8';
-      ctx.shadowBlur = 20;
-    } else if (isPersonPresent) {
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 2;
-      ctx.shadowColor = '#10b981';
-      ctx.shadowBlur = 10;
-    } else {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.lineWidth = 1;
-      ctx.shadowBlur = 0;
-    }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    const needleX = centerX + Math.cos(angle) * (radius + 20);
-    const needleY = centerY + Math.sin(angle) * (radius + 20);
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(needleX, needleY);
-    ctx.strokeStyle = isPersonPresent ? 'rgba(56, 189, 248, 0.5)' : 'rgba(255, 255, 255, 0.08)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    angle += 0.03;
-    requestAnimationFrame(drawVisualizer);
-  }
-  drawVisualizer();
 
   function initSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -433,55 +344,43 @@
 
     recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
-    recognition.continuous = false; 
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 3;
-
-    recognition.onstart = () => {
-      isListening = true;
-      updateUIStatus();
-    };
+    recognition.continuous = false;
+    recognition.interimResults = true; // Captures words as you speak them!
 
     recognition.onresult = (e) => {
-      let interim = '';
-      let final = '';
+      let interimTranscript = '';
+      let finalTranscript = '';
 
       for (let i = e.resultIndex; i < e.results.length; ++i) {
         if (e.results[i].isFinal) {
-          final += e.results[i][0].transcript;
+          finalTranscript += e.results[i][0].transcript;
         } else {
-          interim += e.results[i][0].transcript;
+          interimTranscript += e.results[i][0].transcript;
         }
       }
 
-      const text = final || interim;
-      if (text) {
-        document.getElementById("userInput").value = text;
+      // Display every word live as it is spoken
+      const currentSpeech = finalTranscript || interimTranscript;
+      document.getElementById('liveTranscript').innerText = currentSpeech;
+
+      if (finalTranscript) {
+        processQuery(finalTranscript.trim());
       }
-
-      if (final) {
-        processQuery(final.trim());
-      }
     };
 
-    recognition.onerror = () => {
-      isListening = false;
-      updateUIStatus();
+    recognition.onstart = () => { 
+      isListening = true; 
+      updateUIStatus(); 
+      document.getElementById('liveTranscript').innerText = "Listening...";
     };
-
-    recognition.onend = () => {
-      isListening = false;
-      updateUIStatus();
+    recognition.onend = () => { 
+      isListening = false; 
+      updateUIStatus(); 
     };
-  }
-
-  function startListeningSafe() {
-    if (!recognition) return;
-    if (!isListening && !isSpeaking && isPersonPresent) {
-      try {
-        recognition.start();
-      } catch (e) {}
-    }
+    recognition.onerror = () => { 
+      isListening = false; 
+      updateUIStatus(); 
+    };
   }
 
   function toggleManualVoice() {
@@ -489,13 +388,33 @@
     if (isListening) {
       recognition.stop();
     } else {
-      window.speechSynthesis.cancel(); 
-      isSpeaking = false;
+      window.speechSynthesis.cancel();
       try { recognition.start(); } catch(e) {}
     }
   }
 
+  function submitTypedQuery() {
+    const inputField = document.getElementById('queryInput');
+    const queryText = inputField.value.trim();
+    if (queryText) {
+      document.getElementById('liveTranscript').innerText = `Typed: "${queryText}"`;
+      processQuery(queryText);
+      inputField.value = ''; // clear input box after submitting
+    }
+  }
+
+  function handleKeyPress(e) {
+    if (e.key === 'Enter') {
+      submitTypedQuery();
+    }
+  }
+
   async function setupCameraDetection() {
+    if (typeof FaceDetection === 'undefined' || typeof Camera === 'undefined') {
+      setTimeout(setupCameraDetection, 1000);
+      return;
+    }
+
     const videoElement = document.getElementById('webcam');
     const faceDetection = new FaceDetection({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
@@ -505,20 +424,14 @@
 
     faceDetection.onResults((results) => {
       if (results.detections.length > 0) {
-        if (personLeaveTimeout) {
-          clearTimeout(personLeaveTimeout);
-          personLeaveTimeout = null;
-        }
         if (!isPersonPresent) {
           isPersonPresent = true;
           onPersonArrive();
         }
       } else {
-        if (isPersonPresent && !personLeaveTimeout) {
-          personLeaveTimeout = setTimeout(() => {
-            isPersonPresent = false;
-            onPersonLeave();
-          }, 5000);
+        if (isPersonPresent) {
+          isPersonPresent = false;
+          onPersonLeave();
         }
       }
     });
@@ -531,9 +444,9 @@
     camera.start();
   }
 
- function onPersonArrive() {
+  function onPersonArrive() {
     updateUIStatus();
-    const greeting = `Hello, welcome to the Computer Science Department. I am LUNA, created by ${creatorName} from ${creatorBatch}. Tap the voice button or screen to talk with me!`;
+    const greeting = "Hello, welcome to the Computer Science Department. Type or speak to talk with me!";
     document.getElementById("outputPanel").style.display = "block";
     document.getElementById("outputText").innerText = greeting;
     speakText(greeting);
@@ -542,156 +455,68 @@
   function onPersonLeave() {
     if (recognition && isListening) recognition.stop();
     window.speechSynthesis.cancel();
-    isSpeaking = false;
-    isListening = false;
     updateUIStatus();
     document.getElementById("outputPanel").style.display = "none";
-    document.getElementById("mapPanel").style.display = "none";
-    document.getElementById("userInput").value = "";
   }
 
   function updateUIStatus() {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     const radarText = document.getElementById('radarStatusText');
-    const micBtn = document.getElementById('micBtn');
 
     dot.className = 'status-dot';
-
     if (!isPersonPresent) {
       text.innerText = "LUNA STANDBY";
-      radarText.innerText = "SCANNING FOR APPROACHING VISITORS";
-      micBtn.style.background = "rgba(255, 255, 255, 0.05)";
-    } else if (isSpeaking) {
-      dot.classList.add('listening');
-      text.innerText = "LUNA TRANSMITTING";
-      radarText.innerText = "SPEAK TO INTERRUPT OR TYPE BELOW";
-      micBtn.style.background = "rgba(255, 255, 255, 0.05)";
+      radarText.innerText = "SCANNING FOR VISITORS";
     } else if (isListening) {
       dot.classList.add('listening');
       text.innerText = "LUNA LISTENING";
       radarText.innerText = "LISTENING... SPEAK NOW";
-      micBtn.style.background = "rgba(56, 189, 248, 0.2)";
     } else {
       dot.classList.add('active');
       text.innerText = "VISITOR DETECTED";
-      radarText.innerText = "TAP MIC BUTTON OR SCREEN TO SPEAK"; // Fixed to match actual browser behavior
-      micBtn.style.background = "rgba(255, 255, 255, 0.05)";
+      radarText.innerText = "TAP ORB OR TYPE TO SPEAK";
     }
   }
 
-  function processQuery(spokenQuery) {
-    const query = spokenQuery || document.getElementById("userInput").value.trim();
+  function processQuery(query) {
     if (!query) return;
-
     window.speechSynthesis.cancel();
-    isSpeaking = false;
-    if (recognition && isListening) recognition.stop();
-
+    
     const outputPanel = document.getElementById("outputPanel");
     const outputText = document.getElementById("outputText");
     outputPanel.style.display = "block";
-    outputText.innerText = "Processing query...";
-
+    
     const q = query.toLowerCase();
     let reply = "";
 
-    // Instant Local Matching Engine (Guarantees 0 lag & high accuracy)
-    if (q.includes("who created") || q.includes("who built") || q.includes("creator") || q.includes("who made") || q.includes("author") || q.includes("developer")) {
+    if (q.includes("who created") || q.includes("who built") || q.includes("creator")) {
       reply = `I was proudly created, built, and authored by ${creatorName} from ${creatorBatch}!`;
-    } else if (q.includes("who is luna") || q.includes("what is luna") || q.includes("who are you")) {
-      reply = `I am LUNA, a Logical Universal Navigation Assistant designed to help visitors navigate the CSE department. I was built by ${creatorName} from ${creatorBatch}.`;
-    } else if (q.includes("hod") || q.includes("johnson") || q.includes("001")) {
-      reply = "The HOD Office is located on the Ground Floor in Room 001, open from 9 AM to 5 PM.";
-    } else if (q.includes("smith") || q.includes("102") || q.includes("hardware")) {
-      reply = "Dr. Smith's office cabin is 102 on the 1st Floor, and his schedule is available near Hardware Lab 105.";
-    } else if (q.includes("lab 1") || q.includes("software")) {
-      reply = "Software Lab 1 is located on the 2nd Floor in Room 201.";
-    } else if (q.includes("restroom") || q.includes("washroom") || q.includes("toilet")) {
-      reply = "Restrooms are located on the Ground Floor near the entrance, 1st Floor by the elevator, and 2nd Floor by the stairs.";
+    } else if (q.includes("who is luna") || q.includes("what is luna")) {
+      reply = `I am LUNA, a Logical Universal Navigation Assistant built by ${creatorName} from ${creatorBatch} to help visitors navigate the CSE department.`;
+    } else if (q.includes("nasreen") || q.includes("miss") || q.includes("ali") || q.includes("timetable") || q.includes("schedule")) {
+      reply = "Nasreen Ali teaches Design and Analysis of Algorithms (PCCST502) and Algorithmic Thinking with Python (UCEST105P). Her schedule includes classes for S5 CSE A, S5 CSE B, and S7 CSE A across the week.";
+    } else if (q.includes("hod")) {
+      reply = "The HOD Office is located on the Ground Floor in Room 001.";
+    } else if (q.includes("smith")) {
+      reply = "Dr. Smith's office cabin is 102 on the 1st Floor.";
+    } else if (q.includes("restroom")) {
+      reply = "Restrooms are located on the Ground Floor near the entrance.";
     } else {
-      reply = `I can assist you with locating faculty offices and labs in the CSE Department. I was built by ${creatorName} from ${creatorBatch}.`;
+      reply = "I can assist you with locating faculty schedules, rooms, and labs in the CSE Department. How else can I help you?";
     }
 
     outputText.innerText = reply;
-    renderVisualMap(query);
     speakText(reply);
   }
 
   function speakText(text) {
-    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-
-    utterance.onstart = () => {
-      isSpeaking = true;
-      updateUIStatus();
-    };
-
-    utterance.onend = () => {
-      isSpeaking = false;
-      updateUIStatus();
-      // Safely queue micro-delay to restart listening immediately after speech ends
-      setTimeout(() => {
-        startListeningSafe();
-      }, 500);
-    };
-
-    utterance.onerror = () => {
-      isSpeaking = false;
-      updateUIStatus();
-      setTimeout(() => {
-        startListeningSafe();
-      }, 500);
-    };
-
     window.speechSynthesis.speak(utterance);
   }
 
   function quickAsk(text) {
-    document.getElementById("userInput").value = text;
     processQuery(text);
-  }
-
-  function triggerManualAsk() {
-    processQuery();
-  }
-
-  function handleKeyInput(event) {
-    if (event.key === 'Enter') {
-      processQuery();
-    }
-  }
-
-  function renderVisualMap(query) {
-    const mapPanel = document.getElementById("mapPanel");
-    const mapTitle = document.getElementById("mapTitle");
-    const container = document.getElementById("svgContainer");
-    const q = query.toLowerCase();
-
-    if (q.includes("hod") || q.includes("johnson") || q.includes("001")) {
-      mapTitle.innerText = "NAVIGATION SCHEMATIC // GROUND FLOOR EAST WING";
-      container.innerHTML = `
-        <svg viewBox="0 0 600 100" style="background:rgba(0,0,0,0.5); border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
-          <rect x="20" y="20" width="160" height="60" rx="6" fill="#10b981" opacity="0.8"/>
-          <text x="38" y="55" fill="white" font-family="JetBrains Mono" font-size="12" font-weight="600">HOD OFFICE [001]</text>
-          <rect x="200" y="20" width="380" height="60" rx="6" fill="#1e293b"/>
-          <text x="320" y="55" fill="#64748b" font-family="JetBrains Mono" font-size="12">CORRIDOR A</text>
-        </svg>`;
-      mapPanel.style.display = "block";
-    } else if (q.includes("smith") || q.includes("102") || q.includes("hardware")) {
-      mapTitle.innerText = "NAVIGATION SCHEMATIC // 1ST FLOOR NORTH WING";
-      container.innerHTML = `
-        <svg viewBox="0 0 600 100" style="background:rgba(0,0,0,0.5); border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
-          <rect x="20" y="20" width="170" height="60" rx="6" fill="#38bdf8" opacity="0.8"/>
-          <text x="32" y="55" fill="black" font-family="JetBrains Mono" font-size="12" font-weight="600">DR. SMITH [102]</text>
-          <rect x="210" y="20" width="370" height="60" rx="6" fill="#1e293b"/>
-          <text x="320" y="55" fill="#64748b" font-family="JetBrains Mono" font-size="12">HARDWARE LAB [105]</text>
-        </svg>`;
-      mapPanel.style.display = "block";
-    } else {
-      mapPanel.style.display = "none";
-    }
   }
 
   window.onload = () => {
