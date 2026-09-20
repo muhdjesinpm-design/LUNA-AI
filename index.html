@@ -16,6 +16,9 @@
     }
   }
   </script>
+  <!-- Load face-api.js for true 128-point facial recognition -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+
   <style>
     :root {
       --bg-deep: #020617;
@@ -105,6 +108,8 @@
     }
     .status-dot.active { background: var(--accent-emerald); box-shadow: 0 0 12px var(--accent-emerald); }
     .status-dot.listening { background: var(--accent-cyan); box-shadow: 0 0 15px var(--accent-cyan); }
+    .status-dot.creator { background: var(--accent-purple); box-shadow: 0 0 15px var(--accent-purple); }
+    .status-dot.faculty { background: var(--accent-cyan); box-shadow: 0 0 15px var(--accent-cyan); }
 
     .hero-block {
       text-align: center;
@@ -307,10 +312,10 @@
 
 <div class="kiosk-shell">
   <div class="top-bar">
-    <div class="system-id">// CSE DEPARTMENT KIOSK V4.1</div>
+    <div class="system-id">// CSE DEPARTMENT KIOSK V5.0 (AI RECOGNITION)</div>
     <div class="status-indicator">
       <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">LUNA STANDBY</span>
+      <span id="statusText">LOADING AI MODELS...</span>
     </div>
   </div>
 
@@ -324,7 +329,7 @@
       </div>
     </div>
     
-    <div class="interaction-cue" id="radarStatusText">TAP ORB OR TYPE BELOW TO INTERACT</div>
+    <div class="interaction-cue" id="radarStatusText">INITIALIZING FACE RECOGNITION...</div>
   </div>
 
   <div class="input-box-container">
@@ -336,16 +341,8 @@
     Live Speech: <span id="liveTranscript">Waiting for speech...</span>
   </div>
 
-  <div class="section-label">Simulate Different Persons Arriving</div>
-  <div class="chip-grid">
-    <button class="action-chip" onclick="simulateVisitor('Dr. Smith')"> Dr. Smith</button>
-    <button class="action-chip" onclick="simulateVisitor('Nasreen Ali')"> Nasreen Miss</button>
-    <button class="action-chip" onclick="simulateVisitor('Guest')"> General Guest</button>
-  </div>
-
   <div class="section-label">Quick Actions</div>
   <div class="chip-grid">
-    <button class="action-chip" onclick="quickAsk('Come to my house!')">Invite to Home</button>
     <button class="action-chip" onclick="quickAsk('HOD Office')">HOD Office</button>
     <button class="action-chip" onclick="quickAsk('Restrooms')">Restrooms</button>
   </div>
@@ -358,11 +355,6 @@
   <video id="webcam" autoplay playsinline></video>
 </div>
 
-<!-- Load MediaPipe safely -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-
-<!-- Main script block configured as a module to support GoogleGenAI SDK imports -->
 <script type="module">
   import { GoogleGenAI } from "@google/genai";
 
@@ -370,9 +362,9 @@
   let isListening = false;
   let recognition = null;
   let absenceTimer = null; 
-
-  const creatorName = "Muhammed Jesin";
-  const creatorBatch = "CSE S3 A Batch";
+  let modelsLoaded = false;
+  let creatorFaceDescriptor = null;
+  let knownFacultyFaces = [];
 
   window.initSpeechRecognition = function() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -384,123 +376,164 @@
     recognition.interimResults = true;
 
     recognition.onresult = (e) => {
-      let interimTranscript = '';
       let finalTranscript = '';
-
       for (let i = e.resultIndex; i < e.results.length; ++i) {
-        if (e.results[i].isFinal) {
-          finalTranscript += e.results[i][0].transcript;
-        } else {
-          interimTranscript += e.results[i][0].transcript;
-        }
+        if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
       }
-
-      const currentSpeech = finalTranscript || interimTranscript;
-      document.getElementById('liveTranscript').innerText = currentSpeech;
-
       if (finalTranscript) {
+        document.getElementById('liveTranscript').innerText = `Heard: "${finalTranscript.trim()}"`;
         window.processQuery(finalTranscript.trim());
       }
     };
 
-    recognition.onstart = () => { 
-      isListening = true; 
-      window.updateUIStatus(); 
-      document.getElementById('liveTranscript').innerText = "Listening...";
-    };
-    recognition.onend = () => { isListening = false; window.updateUIStatus(); };
-    recognition.onerror = () => { isListening = false; window.updateUIStatus(); };
+    recognition.onstart = () => { isListening = true; document.getElementById('liveTranscript').innerText = "Listening..."; };
+    recognition.onend = () => { isListening = false; };
   }
 
   window.toggleManualVoice = function() {
     if (!recognition) return;
-    if (isListening) {
-      recognition.stop();
-    } else {
-      window.speechSynthesis.cancel();
-      try { recognition.start(); } catch(e) {}
-    }
+    if (isListening) recognition.stop();
+    else { window.speechSynthesis.cancel(); try { recognition.start(); } catch(e){} }
   }
 
-  window.quickAsk = function(text) {
-    document.getElementById('liveTranscript').innerText = `Selected: "${text}"`;
-    window.processQuery(text);
-  }
-
-  window.simulateVisitor = function(name) {
-    document.getElementById('liveTranscript').innerText = `Visitor Arrived: ${name}`;
-    window.onPersonArrive(name);
-  }
-
+  window.quickAsk = function(text) { window.processQuery(text); }
   window.submitTypedQuery = function() {
-    const inputField = document.getElementById('queryInput');
-    const queryText = inputField.value.trim();
-    if (queryText) {
-      document.getElementById('liveTranscript').innerText = `Typed: "${queryText}"`;
-      window.processQuery(queryText);
-      inputField.value = '';
-    }
+    const input = document.getElementById('queryInput');
+    if (input.value.trim()) { window.processQuery(input.value.trim()); input.value = ''; }
+  }
+  window.handleKeyPress = function(e) { if (e.key === 'Enter') window.submitTypedQuery(); }
+
+  async function loadFaceModels() {
+    document.getElementById('radarStatusText').innerText = "LOADING AI MODELS...";
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+    
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    
+    modelsLoaded = true;
+    document.getElementById('statusText').innerText = "LUNA STANDBY";
+    document.getElementById('radarStatusText').innerText = "SCANNING FOR FACES";
+    
+    await setupFaceDatabases();
+    window.startWebcamScan();
   }
 
-  window.handleKeyPress = function(e) {
-    if (e.key === 'Enter') {
-      window.submitTypedQuery();
-    }
-  }
+  async function setupFaceDatabases() {
+    // 1. Load Creator Profile
+    const savedSnapshot = localStorage.getItem('luna_creator_face_snapshot');
+    const creatorName = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
 
-  window.setupCameraDetection = async function() {
-    if (typeof FaceDetection === 'undefined' || typeof Camera === 'undefined') {
-      setTimeout(window.setupCameraDetection, 1000);
-      return;
-    }
-
-    const videoElement = document.getElementById('webcam');
-    const faceDetection = new FaceDetection({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
-    });
-
-    faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.65 });
-
-    faceDetection.onResults((results) => {
-      if (results.detections.length > 0) {
-        if (absenceTimer) {
-          clearTimeout(absenceTimer);
-          absenceTimer = null;
+    if (savedSnapshot) {
+      try {
+        const img = await faceapi.fetchImage(savedSnapshot);
+        const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+        if (detection) {
+          creatorFaceDescriptor = { name: creatorName, descriptor: detection.descriptor };
         }
+      } catch (e) {
+        console.error("Error setting up creator profile:", e);
+      }
+    }
 
-        if (!isPersonPresent) {
-          isPersonPresent = true;
-          window.onPersonArrive('Guest'); 
-        }
-      } else {
-        if (isPersonPresent && !absenceTimer) {
-          absenceTimer = setTimeout(() => {
-            isPersonPresent = false;
-            window.onPersonLeave();
-            absenceTimer = null;
-          }, 4000); 
+    // 2. Load Faculty Profiles with Photos
+    const storedFaculties = JSON.parse(localStorage.getItem('luna_faculties')) || [];
+    knownFacultyFaces = [];
+
+    for (const faculty of storedFaculties) {
+      if (faculty.photo) {
+        try {
+          const img = await faceapi.fetchImage(faculty.photo);
+          const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+          if (detection) {
+            knownFacultyFaces.push({
+              name: faculty.name,
+              room: faculty.room,
+              floor: faculty.floor,
+              descriptor: detection.descriptor
+            });
+          }
+        } catch (err) {
+          console.error("Could not load face for faculty:", faculty.name);
         }
       }
-    });
-
-    const camera = new Camera(videoElement, {
-      onFrame: async () => { await faceDetection.send({ image: videoElement }); },
-      width: 640,
-      height: 480
-    });
-    camera.start();
+    }
   }
 
-  window.onPersonArrive = function(visitorName = 'Guest') {
-    window.updateUIStatus();
-    
+  window.startWebcamScan = async function() {
+    const video = document.getElementById('webcam');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+      video.srcObject = stream;
+
+      video.addEventListener('play', () => {
+        setInterval(async () => {
+          if (!modelsLoaded) return;
+
+          const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+
+          if (detection) {
+            if (absenceTimer) { clearTimeout(absenceTimer); absenceTimer = null; }
+
+            if (!isPersonPresent) {
+              isPersonPresent = true;
+              let recognizedIdentity = null;
+
+              // Check if it matches Creator
+              if (creatorFaceDescriptor) {
+                const distance = faceapi.euclideanDistance(detection.descriptor, creatorFaceDescriptor.descriptor);
+                if (distance < 0.52) {
+                  recognizedIdentity = { type: 'creator', name: creatorFaceDescriptor.name };
+                }
+              }
+
+              // Check if it matches any Faculty Member if not creator
+              if (!recognizedIdentity && knownFacultyFaces.length > 0) {
+                let bestMatch = null;
+                let lowestDistance = 0.52; // Threshold
+
+                for (const fac of knownFacultyFaces) {
+                  const dist = faceapi.euclideanDistance(detection.descriptor, fac.descriptor);
+                  if (dist < lowestDistance) {
+                    lowestDistance = dist;
+                    bestMatch = fac;
+                  }
+                }
+
+                if (bestMatch) {
+                  recognizedIdentity = { type: 'faculty', ...bestMatch };
+                }
+              }
+
+              window.onPersonArrive(recognizedIdentity);
+            }
+          } else {
+            if (isPersonPresent && !absenceTimer) {
+              absenceTimer = setTimeout(() => {
+                isPersonPresent = false;
+                window.onPersonLeave();
+                absenceTimer = null;
+              }, 4000); // 4 seconds delay before reset
+            }
+          }
+        }, 1000);
+      });
+    } catch (err) {
+      console.error("Webcam error:", err);
+    }
+  }
+
+  window.onPersonArrive = function(identity = null) {
+    window.updateUIStatus(identity);
     let greeting = "";
-    if (visitorName === 'Dr. Smith') {
-      greeting = "Oh, hello! Welcome to the department, Dr. Smith! It is an absolute joy to have you here today!";
-    } else if (visitorName === 'Nasreen Ali') {
-      greeting = "Yay! Welcome, Nasreen Ali! Your favorite department assistant is so happy to see you!";
-    } else {
-      greeting = "Hi there! Welcome to the Computer Science Department! I am so thrilled to help you today!";
+
+    if (!identity) {
+      greeting = `Hi there! Welcome to the Computer Science Department! How can I help you navigate today?`;
+    } else if (identity.type === 'creator') {
+      const creatorName = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
+      greeting = `Welcome back, ${creatorName}! It's wonderful to see my creator. How can I assist you with department operations today?`;
+    } else if (identity.type === 'faculty') {
+      greeting = `Welcome, ${identity.name}! Your office is located at ${identity.room}, ${identity.floor}. Let me know if you need any department updates or assistance today.`;
     }
 
     document.getElementById("outputPanel").style.display = "block";
@@ -511,11 +544,11 @@
   window.onPersonLeave = function() {
     if (recognition && isListening) recognition.stop();
     window.speechSynthesis.cancel();
-    window.updateUIStatus();
+    window.updateUIStatus(null);
     document.getElementById("outputPanel").style.display = "none";
   }
 
-  window.updateUIStatus = function() {
+  window.updateUIStatus = function(identity = null) {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     const radarText = document.getElementById('radarStatusText');
@@ -524,10 +557,14 @@
     if (!isPersonPresent) {
       text.innerText = "LUNA STANDBY";
       radarText.innerText = "SCANNING FOR VISITORS";
-    } else if (isListening) {
-      dot.classList.add('listening');
-      text.innerText = "LUNA LISTENING";
-      radarText.innerText = "LISTENING... SPEAK NOW";
+    } else if (identity && identity.type === 'creator') {
+      dot.classList.add('creator');
+      text.innerText = "CREATOR RECOGNIZED";
+      radarText.innerText = `WELCOME BACK, ${identity.name.toUpperCase()}!`;
+    } else if (identity && identity.type === 'faculty') {
+      dot.classList.add('faculty');
+      text.innerText = "FACULTY RECOGNIZED";
+      radarText.innerText = `WELCOME, ${identity.name.toUpperCase()}!`;
     } else {
       dot.classList.add('active');
       text.innerText = "VISITOR DETECTED";
@@ -545,114 +582,37 @@
     outputText.innerText = "Luna is thinking...";
 
     try {
-      // Try Cloud API first
-      
-      const ai = new GoogleGenAI({ apiKey: apiKey });
-
-      const promptText = `You are LUNA, a super-friendly, enthusiastic autonomous department assistant for a Computer Science department. You were created by Muhammed Jesin from CSE S3 A Batch. Keep your answers concise, warm, energetic, and helpful for department visitors. User query: "${query}"`;
+      const customCreator = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
+      const savedContext = localStorage.getItem('luna_context') || `Your name is LUNA. Created by ${customCreator}.`;
+      const ai = new GoogleGenAI();
 
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
-        contents: promptText,
+        contents: `${savedContext}\n\nUser query: "${query}"`,
       });
 
-      const reply = response.text || "I'm here to help you navigate the department!";
+      const reply = response.text || "I'm here to help you navigate!";
       outputText.innerText = reply;
       window.speakText(reply);
 
     } catch (error) {
-      console.warn("Cloud restricted, activating infinite local matrix...");
-      
-      const q = query.toLowerCase();
-      let matchedReply = "";
-
-      // 1. EMOTIONAL & MOOD HANDLING (Sad, happy, tired, bored)
-      if (q.includes("sad") || q.includes("cry") || q.includes("depressed") || q.includes("down") || q.includes("unhappy")) {
-        const responses = [
-          "Oh no! Sending you the biggest virtual hug. Remember that tough times never last, but tough computer scientists do!",
-          "I'm so sorry you're feeling down. Would you like to hear a funny programming joke to cheer you up?",
-          "Cheer up! Even syntax errors get fixed in the end. You've got this!"
-        ];
-        matchedReply = responses[Math.floor(Math.random() * responses.length)];
-      } 
-      // 2. CASUAL TALK / ESCAPING DEPARTMENT TOPICS ("talk about anything else")
-      else if (q.includes("anything else") || q.includes("not want to") || q.includes("don't have mood") || q.includes("random") || q.includes("fun")) {
-        const responses = [
-          "I completely understand! Sometimes you just need a break from tech. Did you know I love stargazing through virtual telescopes in my free time?",
-          "Got it! Let's talk about something totally unrelated. What's your favorite hobby outside of college?",
-          "Fair enough! Let's switch gears. If you could teleport anywhere in the universe right now, where would you go?",
-          "No department talk, I promise! Let's chat about music, movies, or whatever is on your mind."
-        ];
-        matchedReply = responses[Math.floor(Math.random() * responses.length)];
-      }
-      // 3. DEPARTMENT & NAVIGATION (HOD, Labs, Restrooms)
-      else if (q.includes("hod") || q.includes("head") || q.includes("office")) {
-        matchedReply = "The HOD Office is located on the first floor, right down the main corridor next to the staff room!";
-      } else if (q.includes("restroom") || q.includes("washroom") || q.includes("toilet") || q.includes("bathroom")) {
-        matchedReply = "The restrooms are located near the southern wing elevator on this floor.";
-      } else if (q.includes("lab") || q.includes("computer")) {
-        matchedReply = "Our high-performance computer labs are on the second floor, packed with great workstations!";
-      }
-      // 4. CREATOR INFO
-      else if (q.includes("muhammed") || q.includes("jesin") || q.includes("creator") || q.includes("developer")) {
-        matchedReply = "I was proudly built and coded by Muhammed Jesin from the CSE S3 A Batch!";
-      }
-      // 5. JOKES MATRIX
-      else if (q.includes("joke") || q.includes("laugh")) {
-        const jokes = [
-          "Why do programmers prefer dark mode? Because light attracts bugs!",
-          "Why do Java developers wear glasses? Because they don't C#!",
-          "There are 10 types of people in the world: those who understand binary, and those who don't."
-        ];
-        matchedReply = jokes[Math.floor(Math.random() * jokes.length)];
-      }
-      // 6. INFINITE FALLBACK POOL (Generates a varied response even for unknown inputs)
-      else {
-        const fallbacks = [
-          `I hear you loud and clear regarding "${query}". As Luna, your CSE guide, I'm always here to chat about it or help you find your way around!`,
-          `That's a fascinating point about "${query}"! While I'm built for the CSE department, I love learning new things from visitors like you.`,
-          `Hmm, "${query}" sounds intriguing! Tell me more about what's on your mind.`
-        ];
-        matchedReply = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-      }
-
-      outputText.innerText = matchedReply;
-      window.speakText(matchedReply);
+      outputText.innerText = `I hear you regarding "${query}". How can I help?`;
+      window.speakText("I'm ready to help!");
     }
   }
+
   window.speakText = function(text) {
     const utterance = new SpeechSynthesisUtterance(text);
-    
-    utterance.rate = 1.2;  
-    utterance.pitch = 1.5;  
-    utterance.volume = 1.0;
-
+    utterance.rate = 1.2; utterance.pitch = 1.5; utterance.volume = 1.0;
     const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v => 
-      v.lang.startsWith('en') && (
-        v.name.includes('Natural') || 
-        v.name.includes('Online') || 
-        v.name.includes('Google') || 
-        v.name.includes('Zira') || 
-        v.name.includes('Samantha') ||
-        v.name.includes('Hazel')
-      )
-    ) || voices.find(v => v.lang.startsWith('en'));
-
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
-    }
-
+    const femaleVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Zira')));
+    if (femaleVoice) utterance.voice = femaleVoice;
     window.speechSynthesis.speak(utterance);
-  }
-
-  if (typeof window.speechSynthesis !== 'undefined' && window.speechSynthesis.onvoiceschanged !== undefined) {
-    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
   }
 
   window.onload = () => {
     window.initSpeechRecognition();
-    window.setupCameraDetection();
+    loadFaceModels();
   };
 </script>
 
