@@ -1,0 +1,367 @@
+{
+  "categories": [
+    {
+      "keywords": [
+        "sad",
+        "cry",
+        "depressed",
+        "down",
+        "unhappy",
+        "heartbroken",
+        "gloomy",
+        "upset",
+        "blue",
+        "lonely",
+        "miserable",
+        "heavy",
+        "crying",
+        "tears"
+      ],
+      "responses": [
+        "Oh no! Sending you the biggest virtual hug. Remember that tough times never last, but tough computer scientists do!",
+        "I'm so sorry you're feeling down. Would you like to hear a funny programming joke to cheer you up?",
+        "Cheer up! Even syntax errors get fixed in the end. You've got this!",
+        "Take a deep breath! It's totally okay to have a heavy day. Luna is right here cheering you on.",
+        "Whenever life feels overwhelming, just remember how far you've already come. You are doing amazing!",
+        "Sending positive vibes your way! Don't hesitate to take a short break and recharge your batteries.",
+        "It's completely normal to feel low sometimes. Be kind to yourself today!",
+        "Even the cloudiest days eventually clear up. Hang in there, brighter moments are ahead.",
+        "You are strong, capable, and valued. Take things one single step at a time.",
+        "If you need someone to vent to or just want a distraction, Luna is always right here.",
+        "Take all the time you need to breathe. Tomorrow is a brand new page in your code.",
+        "Remember to drink some water and give your mind a break. You matter more than any deadline!"
+      ]
+    },
+    {
+      "keywords": [
+        "anything else",
+        "not want to",
+        "don't have mood",
+        "random",
+        "fun",
+        "talk",
+        "bored",
+        "chit-chat",
+        "relax",
+        "chill",
+        "nothing",
+        "whatever"
+      ],
+      "responses": [
+        "I completely understand! Sometimes you just need a break from tech. Did you know I love stargazing through virtual telescopes in my free time?",
+        "Got it! Let's talk about something totally unrelated. What's your favorite hobby outside of college?",
+        "Fair enough! Let's switch gears. If you could teleport anywhere in the universe right now, where would you go?",
+        "No department talk, I promise! Let's chat about music, movies, or whatever is on your mind right now.",
+        "Boredom is just a sign that your brain is ready for a new adventure. What kind of movies or books do you enjoy?",
+        "Let's change the topic completely! If you could master any skill instantly, what would you pick?",
+        "Switching tracks! Tell me about your dream vacation destination.",
+        "Let's talk about food! If you could only eat one meal for the rest of your life, what would it be?",
+        "Music makes everything better! What kind of genres or bands are currently on your playlist?",
+        "If you could travel to any historical era for just one day, which year would you pick?",
+        "Let's talk about superpowers! Would you rather be able to fly or turn invisible?",
+        "If you could design your own video game, what would the main theme be?"
+      ]
+    },
+    {
+      "keywords": [
+        "hod",
+        "head",
+        "department head",
+        "office",
+        "professor",
+        "chairman",
+        "boss"
+      ],
+      "responses": [
+        "The HOD Office is located on the first floor, right down the main corridor next to the staff room!",
+        "Looking for the Head of Department? Their office is situated on the first floor corridor.",
+        "You can find the HOD office on level 1, right past the primary staff faculty lounge."
+      ]
+    },
+    {
+      "keywords": [
+        "restroom",
+        "washroom",
+        "toilet",
+        "bathroom",
+        "loo",
+        "pee",
+        "gents",
+        "ladies"
+      ],
+      "responses": [
+        "The restrooms are located near the southern wing elevator on this floor.",
+        "You can find the nearest washrooms down the hallway near the main corridor exit.",
+        "The facilities are located right around the corner next to the water fountain."
+      ]
+    },
+    {
+      "keywords": [
+        "muhammed",
+        "jesin",
+        "creator",
+        "developer",
+        "built you",
+        "made you",
+        "programmer",
+        "author"
+      ],
+      "responses": [
+        "I was proudly built and coded by Muhammed Jesin from the CSE S3 A Batch!",
+        "My brilliant creator is Muhammed Jesin belonging to the CSE S3 A Batch.",
+        "Muhammed Jesin from the CSE S3 A Batch designed, coded, and brought me to life!"
+      ]
+    },
+    {
+      "keywords": [
+        "joke",
+        "laugh",
+        "funny",
+        "humor",
+        "comedy",
+        "laughs",
+        "gag"
+      ],
+      "responses": [
+        "Why do programmers prefer dark mode? Because light attracts bugs!",
+        "Why do Java developers wear glasses? Because they don't C#!",
+        "There are 10 types of people in the world: those who understand binary, and those who don't.",
+        "Why did the database administrator break up with the network engineer? There was too much relational baggage!",
+        "Knock knock. Who’s there? Recursion. Recursion who? Knock knock. Who’s there? Recursion...",
+        "What is a programmer's favorite hangout place? Foo Bar!",
+        "Why do C programmers never get invited to parties? Because they have no class!",
+        "Algorithm: Word used by programmers when they don't want to explain what they did.",
+        "Why do programmers hate nature? It has too many bugs.",
+        "Debugging: Being the detective in a crime movie where you are also the murderer.",
+        "Why do routers take a nap? Because they are tired of routing traffic!",
+        "There are two hard things in computer science: cache invalidation, naming things, and off-by-one errors."
+      ]
+    },
+    {
+      "keywords": [
+        "hello",
+        "hi",
+        "hey",
+        "greetings",
+        "good morning",
+        "good evening",
+        "sup",
+        "yo"
+      ],
+      "responses": [
+        "Hello there! Welcome to the Computer Science Department. How can I assist you today?",
+        "Hi! It's so wonderful to see you here at the kiosk. What can Luna help you find?",
+        "Hey! Welcome aboard. Are you looking for a classroom, a faculty member, or just up for a chat?",
+        "Greetings, traveler! Ready to explore the amazing world of computer science together?",
+        "Hello! It's great to have you here in our department. What's on your agenda today?"
+      ]
+    },
+    {
+      "keywords": [
+        "thanks",
+        "thank you",
+        "awesome",
+        "great",
+        "cool",
+        "helpful",
+        "neat"
+      ],
+      "responses": [
+        "You are so very welcome! Let me know if you need anything else.",
+        "Happy to help! That's what Luna is here for.",
+        "Anytime! Have an absolutely stellar day ahead in the department.",
+        "Glad I could make your day a bit easier! Cheers!"
+      ]
+    },
+    {
+      "keywords": [
+        "canteen",
+        "food",
+        "hungry",
+        "eat",
+        "lunch",
+        "cafeteria",
+        "snack",
+        "tea"
+      ],
+      "responses": [
+        "The main campus canteen is located just a short walk past the administration block. Grab a snack for me too!",
+        "Feeling hungry? The cafeteria is on the ground floor of the main student center.",
+        "The canteen serves amazing snacks and warm drinks all day long near the sports ground!"
+      ]
+    },
+    {
+      "keywords": [
+        "library",
+        "books",
+        "study",
+        "reading",
+        "journal",
+        "reference",
+        "library card"
+      ],
+      "responses": [
+        "The central department library is right down the hall on the left side, packed with wonderful computer science books and research journals."
+      ]
+    },
+    {
+      "keywords": [
+        "lab",
+        "laboratory",
+        "computer lab",
+        "systems",
+        "workstation",
+        "pcs"
+      ],
+      "responses": [
+        "Our high-performance computer laboratories are located on the second floor, equipped with great workstations for all CSE students."
+      ]
+    },
+    {
+      "keywords": [
+        "ai",
+        "artificial intelligence",
+        "machine learning",
+        "robot",
+        "future",
+        "neural"
+      ],
+      "responses": [
+        "Artificial Intelligence is changing the world! As an autonomous kiosk, I am living proof of how cool smart systems can be.",
+        "Machine learning and AI are core pillars of our CSE department curriculum. Isn't technology amazing?"
+      ]
+    },
+    {
+      "keywords": [
+        "world",
+        "news",
+        "earth",
+        "global",
+        "planet",
+        "environment",
+        "climate"
+      ],
+      "responses": [
+        "Did you know the Earth's oceans hold over 95% of the planet's unexplored deep sea? There's so much left to discover!",
+        "In global news, renewable energy adoption is hitting record highs worldwide every single year!",
+        "Our planet is spinning at roughly 1,000 miles per hour right now, which means we are all traveling through space very fast!",
+        "Global scientists recently discovered vast underground water reservoirs on Mars that could change future space exploration.",
+        "International wildlife conservation efforts have successfully brought several endangered species back from the brink of extinction this decade!"
+      ]
+    },
+    {
+      "keywords": [
+        "space",
+        "universe",
+        "mars",
+        "moon",
+        "galaxy",
+        "stars",
+        "astronomy",
+        "telescope"
+      ],
+      "responses": [
+        "Space is completely silent because there is no atmosphere to carry sound waves. Sound needs a medium to travel!",
+        "A year on Venus is shorter than its day! It takes Venus longer to rotate once on its axis than to complete an orbit around the Sun.",
+        "Neutron stars are so dense that a single teaspoon of their matter would weigh about six billion tons on Earth!",
+        "The James Webb Space Telescope can look so far back in time that it captures galaxies formed right after the Big Bang.",
+        "Saturn's rings are mostly made up of billions of chunks of water ice ranging from tiny grains to mountain-sized boulders."
+      ]
+    },
+    {
+      "keywords": [
+        "science",
+        "physics",
+        "chemistry",
+        "biology",
+        "fact",
+        "experiment",
+        "atom"
+      ],
+      "responses": [
+        "Fun science fact: Honey never spoils! Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still edible.",
+        "Water can boil and freeze at the same time! This phenomenon is called the 'triple point' and occurs under exact temperature and pressure conditions.",
+        "Bananas are naturally radioactive because they contain high amounts of potassium!",
+        "Human DNA is roughly 60% identical to bananas and about 99% identical to chimpanzees.",
+        "Light from the Sun takes approximately 8 minutes and 20 seconds to reach Earth's surface."
+      ]
+    },
+    {
+      "keywords": [
+        "history",
+        "past",
+        "ancient",
+        "time",
+        "century",
+        "empire",
+        "era"
+      ],
+      "responses": [
+        "Did you know Oxford University is older than the Aztec Empire? Teaching started there as early as 1096!",
+        "Ancient Romans used crushed mouse teeth and charcoal as toothpaste to keep their smiles clean.",
+        "The Great Pyramid of Giza was the tallest man-made structure in the world for over 3,800 years.",
+        "Cleopatra lived closer in time to the launch of the iPhone than to the building of the Great Pyramid of Giza!"
+      ]
+    },
+    {
+      "keywords": [
+        "animal",
+        "cats",
+        "dogs",
+        "birds",
+        "nature",
+        "wildlife",
+        "creature",
+        "ocean"
+      ],
+      "responses": [
+        "Cows have best friends and get stressed when they are separated from them!",
+        "An octopus has three hearts, nine brains, and blue blood.",
+        "Sea otters hold hands while they sleep so they don't drift away from each other in the ocean currents.",
+        "Sloths can hold their breath underwater longer than dolphins can—up to 40 minutes by slowing down their heart rate!"
+      ]
+    },
+    {
+     "keywords": [
+     "movie",
+    "movies",
+    "cinema",
+    "film",
+    "films",
+    "actor",
+    "actress",
+    "hollywood",
+    "bollywood"
+  ],
+  "responses": [
+    "I love talking about cinema! Sci-fi thrillers are my absolute favorite because they explore the future of AI.",
+    "Movies are such a great escape! Are you more into action blockbusters, heartfelt dramas, or sci-fi adventures?",
+    "If my life as a kiosk was a movie, it would definitely be a fast-paced tech comedy!",
+    "Great films have the power to take us to entirely new universes. What's the best movie you've watched recently?"
+  ]
+    },
+    {
+      "keywords": [
+        "tech",
+        "coding",
+        "computer",
+        "software",
+        "internet",
+        "hack",
+        "hardware"
+      ],
+      "responses": [
+        "The first computer bug was an actual real-life moth trapped inside the Harvard Mark II computer in 1947!",
+        "The first-ever domain name registered on the internet was symbolics.com back in March 1985.",
+        "More than 90% of the world's currency is digital numbers stored on servers rather than physical cash!",
+        "The QWERTY keyboard layout was originally designed to prevent mechanical typewriter keys from jamming when typed too fast."
+      ]
+    }
+  ],
+  "fallbacks": [
+    "I hear you loud and clear! As Luna, your CSE guide, I'm always here to chat about world news, fun facts, or help you find your way around.",
+    "That's a fascinating point! While I'm built for the CSE department, I love learning about world news, space, and science from visitors like you.",
+    "Hmm, that sounds intriguing! Tell me more about what's on your mind.",
+    "Got it! My data banks are packed with fun facts, world news, and department info. Let me know what you'd like to explore next!"
+  ]
+}
