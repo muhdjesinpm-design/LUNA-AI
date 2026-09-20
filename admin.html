@@ -3,329 +3,750 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LUNA — Admin Control Center</title>
+  <title>LUNA — Admin Configuration & Face Registration</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Load face-api.js for facial recognition descriptor embedding -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
 
   <style>
     :root {
-      --bg-main: #05070c;
-      --card-bg: rgba(13, 17, 23, 0.85);
-      --card-border: rgba(255, 255, 255, 0.08);
+      --bg-deep: #020617;
+      --surface-glass: rgba(15, 23, 42, 0.75);
+      --border-glass: rgba(56, 189, 248, 0.12);
       --accent-cyan: #38bdf8;
       --accent-purple: #818cf8;
       --accent-emerald: #10b981;
-      --accent-rose: #f43f5e;
+      --accent-red: #ef4444;
       --text-primary: #f8fafc;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
-      --mono-font: 'JetBrains Mono', monospace;
-      --sans-font: 'Inter', sans-serif;
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background-color: var(--bg-main);
-      background-image: 
-        radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+      background-color: var(--bg-deep);
+      background-image: radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 50%), linear-gradient(to bottom, #020617, #010409);
       min-height: 100vh;
-      font-family: var(--sans-font);
+      font-family: var(--font-sans);
       color: var(--text-primary);
+      padding: 40px 20px;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 30px;
     }
 
-    .admin-container {
+    .container {
       width: 100%;
       max-width: 800px;
-      background: var(--card-bg);
+      background: var(--surface-glass);
       backdrop-filter: blur(24px);
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border-glass);
       border-radius: 24px;
       padding: 40px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      padding-bottom: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
     }
 
     h1 {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: 2px;
-      background: linear-gradient(135deg, #fff, var(--accent-cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
     }
 
-    .badge {
-      font-family: var(--mono-font);
-      font-size: 11px;
-      color: var(--accent-emerald);
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      padding: 4px 12px;
-      border-radius: 20px;
+    p.subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+
+    /* Tab Navigation Bar */
+    .tab-nav {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 15px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glass);
+      color: var(--text-secondary);
+      padding: 10px 18px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(129, 140, 248, 0.2));
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
     }
 
     .section-title {
-      font-family: var(--mono-font);
-      font-size: 12px;
-      color: var(--accent-cyan);
-      letter-spacing: 1.5px;
+      font-size: 16px;
+      font-weight: 600;
       margin-bottom: 15px;
-      text-transform: uppercase;
+      color: var(--accent-purple);
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 8px;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     label {
       display: block;
       font-size: 13px;
+      font-family: var(--font-mono);
       color: var(--text-secondary);
-      margin-bottom: 8px;
-      font-family: var(--mono-font);
+      margin-bottom: 6px;
     }
 
-    input, textarea {
+    input[type="text"], textarea, select {
       width: 100%;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glass);
       border-radius: 12px;
-      padding: 14px;
+      padding: 12px 16px;
       color: var(--text-primary);
-      font-family: var(--sans-font);
+      font-family: var(--font-sans);
       font-size: 14px;
       outline: none;
       transition: all 0.2s;
     }
 
-    input:focus, textarea:focus {
+    input:focus, textarea:focus, select:focus {
       border-color: var(--accent-cyan);
-      box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+      background: rgba(255, 255, 255, 0.06);
     }
 
-    textarea { height: 120px; resize: vertical; }
-
-    .btn-row {
-      display: flex;
-      gap: 12px;
-      margin-top: 25px;
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
     }
 
     .btn {
       background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-      color: #000;
       border: none;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-family: var(--mono-font);
+      border-radius: 12px;
+      color: var(--bg-deep);
       font-weight: 700;
-      font-size: 12px;
+      padding: 12px 24px;
       cursor: pointer;
-      transition: all 0.2s;
+      font-size: 14px;
+      transition: opacity 0.2s;
     }
-
-    .btn:hover { opacity: 0.9; transform: translateY(-2px); }
+    .btn:hover { opacity: 0.9; }
 
     .btn-secondary {
       background: rgba(255, 255, 255, 0.05);
       color: var(--text-primary);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-glass);
+      margin-top: 10px;
     }
 
-    .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
 
-    .error-msg {
-      color: var(--accent-rose);
-      font-family: var(--mono-font);
-      font-size: 12px;
-      margin-top: 10px;
+    .webcam-box {
+      width: 100%;
+      max-width: 320px;
+      height: 240px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-glass);
+      margin-bottom: 15px;
+      position: relative;
       display: none;
+    }
+
+    #adminWebcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    .face-status {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 15px;
+    }
+
+    .faculty-card-preview {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 15px;
+    }
+
+    .faculty-avatar-preview {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--border-glass);
+      flex-shrink: 0;
+    }
+
+    .faculty-info h4 { color: var(--accent-cyan); margin-bottom: 4px; }
+    .faculty-info p { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .edit-btn {
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: var(--accent-cyan);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .delete-btn {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
     }
 
     .status-msg {
-      margin-top: 15px;
-      font-family: var(--mono-font);
-      font-size: 12px;
+      margin-top: 25px;
+      padding: 12px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
       color: var(--accent-emerald);
+      border-radius: 10px;
+      text-align: center;
       display: none;
     }
 
-    .back-link {
-      display: inline-block;
-      margin-top: 30px;
-      color: var(--text-muted);
-      text-decoration: none;
-      font-family: var(--mono-font);
-      font-size: 12px;
+    /* Collapsible Faculty Form Container */
+    #facultyFormContainer {
+      display: none;
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 15px;
+      margin-bottom: 20px;
     }
-    .back-link:hover { color: var(--accent-cyan); }
-
-    /* Hidden Sections */
-    #dashboardSection { display: none; }
   </style>
 </head>
 <body>
 
-<div class="admin-container">
-  
-  <!-- LOGIN VIEW -->
-  <div id="loginSection">
-    <div class="header">
-      <h1>ADMIN AUTHENTICATION</h1>
-      <span class="badge" style="color: var(--accent-cyan); background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.25);">RESTRICTED ACCESS</span>
-    </div>
-    
-    <div class="form-group">
-      <label>Admin Email</label>
-      <input type="email" id="loginEmail" placeholder="Enter admin email...">
-    </div>
+<div class="container">
+  <h1>// LUNA ADMIN PANEL</h1>
+  <p class="subtitle">Configure assistant details, prompt guidelines, creator profile, and faculty directory.</p>
 
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="loginPass" placeholder="Enter password..." onkeydown="handleLoginKey(event)">
-    </div>
+  <!-- Navigation Tabs -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('general', event)">General Settings</button>
+    <button class="tab-btn" onclick="switchTab('creator', event)">Creator Profile & Face</button>
+    <button class="tab-btn" onclick="switchTab('faculty', event)">Faculty Directory</button>
+  </div>
 
-    <div class="btn-row">
-      <button class="btn" onclick="attemptLogin()">LOGIN TO DASHBOARD</button>
-    </div>
-    
-    <div id="errorMsg" class="error-msg">Invalid credentials. Access denied.</div>
-    
-    <div>
-      <a href="index.html" class="back-link">← Return to Live Kiosk Interface</a>
+  <!-- TAB 1: GENERAL SETTINGS -->
+  <div id="tab-general" class="tab-content active">
+    <div class="section-title">Assistant Prompts & Context</div>
+    <div class="form-group">
+      <label>System Context Prompt</label>
+      <textarea id="systemContextInput" rows="6">Your name is LUNA (Logical Universal Navigation Assistant). You are the autonomous AI receptionist and navigation guide for the Computer Science & Engineering (CSE) Department.</textarea>
     </div>
   </div>
 
-  <!-- DASHBOARD VIEW (Hidden until login succeeds) -->
-  <div id="dashboardSection">
-    <div class="header">
-      <h1>LUNA CONTROL PANEL</h1>
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <span class="badge">// AUTHENTICATED</span>
-        <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 10px;" onclick="logout()">LOGOUT</button>
+  <!-- TAB 2: CREATOR PROFILE & FACE -->
+  <div id="tab-creator" class="tab-content">
+    <div class="section-title">Creator Details</div>
+    <div class="row">
+      <div class="form-group">
+        <label>Creator Name</label>
+        <input type="text" id="creatorNameInput" value="Jesin">
+      </div>
+      <div class="form-group">
+        <label>Creator Batch</label>
+        <input type="text" id="creatorBatchInput" value="s3">
       </div>
     </div>
 
-    <div class="section-title">Department Prompt & Knowledge Settings</div>
+    <div class="section-title" style="margin-top: 25px;">Creator Face Registration</div>
+    <p class="subtitle" style="margin-bottom: 15px;">Open camera to register or delete your facial recognition profile.</p>
     
-    <div class="form-group">
-      <label>System Context & AI Dataset</label>
-      <textarea id="systemContextInput"></textarea>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+      <button class="btn btn-secondary" onclick="toggleAdminCamera()" id="toggleCamBtn">Open Camera</button>
+      <button class="btn btn-danger" onclick="deleteAdminFace()">Remove Registered Face</button>
     </div>
 
-    <div class="form-group">
-      <label>Author / Creator Name Override</label>
-      <input type="text" id="creatorNameInput">
+    <div class="webcam-box" id="webcamBoxContainer">
+      <video id="adminWebcam" autoplay playsinline></video>
     </div>
-
-    <div class="form-group">
-      <label>Batch Details</label>
-      <input type="text" id="creatorBatchInput">
+    <div class="face-status" id="faceStatusText">Camera is currently closed. Click "Open Camera" to begin.</div>
+    
+    <div id="captureActionArea" style="display:none;">
+      <button class="btn btn-secondary" onclick="captureCreatorFace()">Capture & Register My Face</button>
     </div>
-
-    <div class="btn-row">
-      <button class="btn" onclick="saveSettings()">SAVE CONFIGURATION</button>
-      <button class="btn btn-secondary" onclick="resetDefaults()">RESET DEFAULTS</button>
-    </div>
-
-    <div id="statusMsg" class="status-msg">Configuration saved successfully!</div>
-
-    <div>
-      <a href="index.html" class="back-link">← Return to Live Kiosk Interface</a>
-    </div>
+    <div id="captureSuccessMsg" style="color: var(--accent-emerald); font-size: 13px; font-family: var(--font-mono); margin-top: 8px; display:none;">Face signature successfully captured and stored!</div>
   </div>
 
+  <!-- TAB 3: FACULTY DIRECTORY -->
+  <div id="tab-faculty" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <div class="section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Manage Faculty Directory</div>
+      <button class="btn btn-secondary" id="toggleFacultyFormBtn" onclick="toggleFacultyForm()" style="margin-top: 0; padding: 8px 16px;">+ Add Faculty</button>
+    </div>
+
+    <!-- Hidden Faculty Form Box (Appears only when Add Faculty is clicked) -->
+    <div id="facultyFormContainer">
+      <div class="form-group">
+        <label>Faculty Name</label>
+        <input type="text" id="facName" placeholder="e.g. Dr. Alan Turing">
+      </div>
+
+      <div class="row">
+        <div class="form-group">
+          <label>Room Number</label>
+          <input type="text" id="facRoom" placeholder="e.g. Room 304">
+        </div>
+        <div class="form-group">
+          <label>Floor</label>
+          <input type="text" id="facFloor" placeholder="e.g. 3rd Floor">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="form-group">
+          <label>Is a Mentor?</label>
+          <select id="facIsMentor" onchange="toggleMentorFields()">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+        <div class="form-group" id="mentorClassGroup" style="display: none;">
+          <label>Mentor Class & Floor</label>
+          <input type="text" id="facMentorDetails" placeholder="e.g. CSE S3 A - 2nd Floor">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Weekly Timetable / Availability Schedule</label>
+        <input type="text" id="facTimetable" placeholder="e.g. Mon: P2(S5 CSE A), Tue: P2-P3(S7 CSE A)...">
+      </div>
+
+      <!-- Faculty Face Photo (Webcam or File Upload) -->
+      <div class="form-group" style="background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border-glass); padding: 16px; border-radius: 12px; margin-top: 15px;">
+        <label style="color: var(--accent-cyan); margin-bottom: 4px;">Faculty Face Photo (Optional)</label>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Snap a photo instantly using your webcam or upload an image file.</p>
+        
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary" style="margin-top:0;" onclick="captureFacultyFacePhoto()">Snap Faculty Photo</button>
+          
+          <label class="btn btn-secondary" style="margin-top:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+            Upload Image File
+            <input type="file" id="facultyFileUpload" accept="image/*" style="display:none;" onchange="handleFacultyFileUpload(event)">
+          </label>
+
+          <!-- Delete Option for Currently Registered Faculty Face -->
+          <button type="button" class="btn btn-danger" style="margin-top:0;" onclick="deleteCurrentFacultyFace()">Delete Registered Face</button>
+        </div>
+
+        <div id="facultyPhotoStatus" style="font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); margin-top: 8px;">No photo added yet for this entry.</div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <button class="btn" onclick="addFaculty()" style="flex: 1;">Save Faculty Entry</button>
+        <button class="btn btn-secondary" onclick="toggleFacultyForm()" style="margin-top:0;">Cancel</button>
+      </div>
+    </div>
+
+    <div id="facultyListContainer" style="margin-top: 15px;"></div>
+  </div>
+
+  <!-- Global Save Action -->
+  <div class="section-title" style="margin-top: 40px;">Save Configuration</div>
+  <button class="btn" onclick="saveSettings()">Save Configuration & Sync to LUNA</button>
+
+  <div class="status-msg" id="statusMsg">Configuration successfully saved and synced to LUNA!</div>
 </div>
 
+<video id="hiddenFacultyVideo" autoplay playsinline style="display:none;"></video>
+<canvas id="snapshotCanvas" style="display:none;"></canvas>
+
 <script>
-  const correctEmail = "muhdjesinpm@gmail.com";
-  const correctPass = "Jesin@2006";
+  let faculties = JSON.parse(localStorage.getItem('luna_faculties')) || [];
+  let modelsLoaded = false;
+  let cameraActive = false;
+  let currentFacultyPhotoData = null; 
+  const videoElement = document.getElementById('adminWebcam');
 
-  const defaultContext = `Your name is LUNA (Logical Universal Navigation Assistant). You are the autonomous AI receptionist and navigation guide for the Computer Science & Engineering (CSE) Department.
+  document.getElementById('creatorNameInput').value = localStorage.getItem('luna_creator') || 'Jesin';
+  document.getElementById('creatorBatchInput').value = localStorage.getItem('luna_batch') || 's3';
+  
+  const savedCtx = localStorage.getItem('luna_context');
+  if(savedCtx) {
+    let cleanCtx = savedCtx.split("\n\nFaculty Members Directory:")[0];
+    document.getElementById('systemContextInput').value = cleanCtx;
+  }
+
+  function switchTab(tabId, event) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+    document.getElementById('tab-' + tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  function toggleFacultyForm() {
+    const formContainer = document.getElementById('facultyFormContainer');
+    const btn = document.getElementById('toggleFacultyFormBtn');
     
-CRITICAL IDENTITY & CREATOR DETAILS:
-- Who created you / Who is your author / Who built you: I was created, built, and authored by Muhammed Jesin from CSE S3 A Batch.
-- Who are you: I am LUNA, a Logical Universal Navigation Assistant designed to help visitors navigate the department.
-
-Department Dataset:
-- HOD Room / Dr. Johnson: Ground Floor, Room 001. Hours: 9 AM - 5 PM.
-- Dr. Smith: Office Cabin 102 (1st Floor). 
-- Software Lab 1: 2nd Floor, Room 201.
-- Hardware Lab: 1st Floor, Room 105.
-- Restrooms: Ground Floor, 1st Floor, and 2nd Floor.`;
-
-  window.onload = () => {
-    // Check if already logged in during this browser session
-    if (sessionStorage.getItem('luna_admin_logged') === 'true') {
-      showDashboard();
-    }
-  };
-
-  function attemptLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass = document.getElementById('loginPass').value;
-    const errorMsg = document.getElementById('errorMsg');
-
-    if (email === correctEmail && pass === correctPass) {
-      sessionStorage.setItem('luna_admin_logged', 'true');
-      showDashboard();
+    if (formContainer.style.display === 'block') {
+      formContainer.style.display = 'none';
+      btn.innerText = '+ Add Faculty';
     } else {
-      errorMsg.style.display = 'block';
+      formContainer.style.display = 'block';
+      btn.innerText = 'Close Form';
+      clearFacultyForm();
     }
   }
 
-  function handleLoginKey(e) {
-    if (e.key === 'Enter') {
-      attemptLogin();
+  async function toggleAdminCamera() {
+    const box = document.getElementById('webcamBoxContainer');
+    const btn = document.getElementById('toggleCamBtn');
+    const statusEl = document.getElementById('faceStatusText');
+    const actionArea = document.getElementById('captureActionArea');
+
+    if (!cameraActive) {
+      box.style.display = 'block';
+      btn.innerText = 'Close Camera';
+      statusEl.innerText = "Initializing camera & loading AI recognition models...";
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+        videoElement.srcObject = stream;
+
+        if (!modelsLoaded) {
+          const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+          await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+          await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+          await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+          modelsLoaded = true;
+        }
+
+        statusEl.innerText = "Camera active. Position face and click capture.";
+        statusEl.style.color = "var(--accent-emerald)";
+        actionArea.style.display = 'block';
+        cameraActive = true;
+      } catch (err) {
+        statusEl.innerText = "Webcam error or permission denied.";
+        statusEl.style.color = "#fca5a5";
+        box.style.display = 'none';
+        btn.innerText = 'Open Camera';
+      }
+    } else {
+      const stream = videoElement.srcObject;
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      videoElement.srcObject = null;
+      box.style.display = 'none';
+      actionArea.style.display = 'none';
+      btn.innerText = 'Open Camera';
+      statusEl.innerText = "Camera is currently closed.";
+      statusEl.style.color = "var(--text-muted)";
+      cameraActive = false;
     }
   }
 
-  function showDashboard() {
-    document.getElementById('loginSection').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'block';
-
-    // Load saved or default values into fields
-    document.getElementById('systemContextInput').value = localStorage.getItem('luna_context') || defaultContext;
-    document.getElementById('creatorNameInput').value = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
-    document.getElementById('creatorBatchInput').value = localStorage.getItem('luna_batch') || 'CSE S3 A Batch';
+  function deleteAdminFace() {
+    if (confirm("Are you sure you want to delete the registered creator face profile?")) {
+      localStorage.removeItem('luna_creator_face_registered');
+      localStorage.removeItem('luna_creator_face_snapshot');
+      alert("Registered creator face profile successfully deleted.");
+    }
   }
 
-  function logout() {
-    sessionStorage.removeItem('luna_admin_logged');
-    location.reload();
+  async function captureCreatorFace() {
+    if (!modelsLoaded) {
+      alert("AI models are still loading. Please wait a moment.");
+      return;
+    }
+
+    const statusEl = document.getElementById('faceStatusText');
+    statusEl.innerText = "Processing face descriptor matrix...";
+
+    const detection = await faceapi.detectSingleFace(videoElement).withFaceLandmarks().withFaceDescriptor();
+
+    if (!detection) {
+      statusEl.innerText = "No face detected clearly! Adjust lighting and look straight.";
+      statusEl.style.color = "#fca5a5";
+      return;
+    }
+
+    const canvas = document.getElementById('snapshotCanvas');
+    canvas.width = videoElement.videoWidth || 320;
+    canvas.height = videoElement.videoHeight || 240;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+
+    localStorage.setItem('luna_creator_face_registered', 'true');
+    localStorage.setItem('luna_creator_face_snapshot', dataURL);
+
+    statusEl.innerText = "Face signature successfully captured!";
+    statusEl.style.color = "var(--accent-emerald)";
+
+    const msg = document.getElementById('captureSuccessMsg');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 4000);
+  }
+
+  async function captureFacultyFacePhoto() {
+    const photoStatus = document.getElementById('facultyPhotoStatus');
+    photoStatus.innerText = "Opening camera & scanning faculty face...";
+    photoStatus.style.color = "var(--accent-cyan)";
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+      const facVideo = document.getElementById('hiddenFacultyVideo');
+      facVideo.srcObject = stream;
+
+      // Wait for video stream frames to load fully to prevent black snapshots
+      await new Promise((resolve, reject) => {
+        facVideo.onloadedmetadata = () => {
+          facVideo.play().then(resolve).catch(reject);
+        };
+        setTimeout(resolve, 2000);
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (!modelsLoaded) {
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        modelsLoaded = true;
+      }
+
+      const detection = await faceapi.detectSingleFace(facVideo).withFaceLandmarks();
+      
+      const canvas = document.getElementById('snapshotCanvas');
+      canvas.width = facVideo.videoWidth || 640;
+      canvas.height = facVideo.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(facVideo, 0, 0, canvas.width, canvas.height);
+      
+      stream.getTracks().forEach(track => track.stop());
+      facVideo.srcObject = null;
+
+      if (!detection) {
+        photoStatus.innerText = "No face detected clearly. Please try again or use file upload.";
+        photoStatus.style.color = "#fca5a5";
+        return;
+      }
+
+      currentFacultyPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+      photoStatus.innerText = "Faculty photo captured successfully!";
+      photoStatus.style.color = "var(--accent-emerald)";
+    } catch (err) {
+      console.error(err);
+      photoStatus.innerText = "Webcam permission denied or unavailable.";
+      photoStatus.style.color = "#fca5a5";
+    }
+  }
+
+  function handleFacultyFileUpload(event) {
+    const file = event.target.files[0];
+    const photoStatus = document.getElementById('facultyPhotoStatus');
+    
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentFacultyPhotoData = e.target.result;
+      photoStatus.innerText = "Faculty photo uploaded successfully!";
+      photoStatus.style.color = "var(--accent-emerald)";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function deleteCurrentFacultyFace() {
+    if (confirm("Are you sure you want to delete the registered face photo data for this faculty member?")) {
+      currentFacultyPhotoData = null;
+      document.getElementById('facultyFileUpload').value = '';
+      const photoStatus = document.getElementById('facultyPhotoStatus');
+      photoStatus.innerText = "No photo added yet for this entry.";
+      photoStatus.style.color = "var(--text-muted)";
+    }
+  }
+
+  function toggleMentorFields() {
+    const isMentor = document.getElementById('facIsMentor').value;
+    document.getElementById('mentorClassGroup').style.display = (isMentor === 'Yes') ? 'block' : 'none';
+  }
+
+  function renderFacultyList() {
+    const container = document.getElementById('facultyListContainer');
+    container.innerHTML = '';
+    
+    if (faculties.length === 0) {
+      container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No custom faculty members added yet.</p>';
+      return;
+    }
+
+    faculties.forEach((f, index) => {
+      let avatarHtml = f.photo ? `<img src="${f.photo}" class="faculty-avatar-preview">` : `<div class="faculty-avatar-preview" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); font-size:9px; color:var(--text-muted); text-align:center;">No Photo</div>`;
+      
+      container.innerHTML += `
+        <div class="faculty-card-preview">
+          ${avatarHtml}
+          <div class="faculty-info" style="flex-grow:1;">
+            <h4>${f.name}</h4>
+            <p><strong>Location:</strong> ${f.room}, ${f.floor}</p>
+            <p><strong>Mentor:</strong> ${f.isMentor} ${f.mentorDetails ? '('+f.mentorDetails+')' : ''}</p>
+            <p><strong>Timetable:</strong> ${f.timetable || 'Not specified'}</p>
+          </div>
+          <div class="card-actions">
+            <button class="edit-btn" onclick="editFaculty(${index})">Edit</button>
+            <button class="delete-btn" onclick="removeFaculty(${index})">Remove</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  function addFaculty() {
+    const name = document.getElementById('facName').value.trim();
+    const room = document.getElementById('facRoom').value.trim();
+    const floor = document.getElementById('facFloor').value.trim();
+    const isMentor = document.getElementById('facIsMentor').value;
+    const mentorDetails = document.getElementById('facMentorDetails').value.trim();
+    const timetable = document.getElementById('facTimetable').value.trim();
+    const photo = currentFacultyPhotoData;
+
+    if (!name || !room || !floor) {
+      alert('Please fill in at least the Faculty Name, Room, and Floor.');
+      return;
+    }
+
+    faculties.push({ name, room, floor, isMentor, mentorDetails, timetable, photo });
+    renderFacultyList();
+    toggleFacultyForm(); 
+  }
+
+  function editFaculty(index) {
+    const f = faculties[index];
+    
+    document.getElementById('facName').value = f.name;
+    document.getElementById('facRoom').value = f.room;
+    document.getElementById('facFloor').value = f.floor;
+    document.getElementById('facIsMentor').value = f.isMentor;
+    document.getElementById('facMentorDetails').value = f.mentorDetails || '';
+    document.getElementById('facTimetable').value = f.timetable || '';
+    currentFacultyPhotoData = f.photo || null;
+
+    toggleMentorFields();
+
+    const photoStatus = document.getElementById('facultyPhotoStatus');
+    if (f.photo) {
+      photoStatus.innerText = "Loaded existing photo for editing.";
+      photoStatus.style.color = "var(--accent-emerald)";
+    } else {
+      photoStatus.innerText = "No photo added yet for this entry.";
+      photoStatus.style.color = "var(--text-muted)";
+    }
+
+    faculties.splice(index, 1);
+    renderFacultyList();
+    
+    document.getElementById('facultyFormContainer').style.display = 'block';
+    document.getElementById('toggleFacultyFormBtn').innerText = 'Close Form';
+    window.scrollTo({ top: document.getElementById('facultyFormContainer').offsetTop - 100, behavior: 'smooth' });
+  }
+
+  function clearFacultyForm() {
+    document.getElementById('facName').value = '';
+    document.getElementById('facRoom').value = '';
+    document.getElementById('facFloor').value = '';
+    document.getElementById('facIsMentor').value = 'No';
+    document.getElementById('facMentorDetails').value = '';
+    document.getElementById('facTimetable').value = '';
+    document.getElementById('mentorClassGroup').style.display = 'none';
+    currentFacultyPhotoData = null;
+    document.getElementById('facultyPhotoStatus').innerText = 'No photo added yet for this entry.';
+    document.getElementById('facultyPhotoStatus').style.color = 'var(--text-muted)';
+  }
+
+  function removeFaculty(index) {
+    faculties.splice(index, 1);
+    renderFacultyList();
   }
 
   function saveSettings() {
-    localStorage.setItem('luna_context', document.getElementById('systemContextInput').value);
+    let contextText = document.getElementById('systemContextInput').value;
+    if (contextText.includes("\n\nFaculty Members Directory:")) {
+      contextText = contextText.split("\n\nFaculty Members Directory:")[0];
+    }
+
+    let facultyString = "\n\nFaculty Members Directory:\n";
+    faculties.forEach(f => {
+      facultyString += `- Name: ${f.name} | Room: ${f.room} (${f.floor}) | Mentor Status: ${f.isMentor} ${f.mentorDetails ? '[Class/Floor: '+f.mentorDetails+']' : ''} | Timetable: ${f.timetable || 'N/A'}\n`;
+    });
+
+    localStorage.setItem('luna_context', contextText + facultyString);
     localStorage.setItem('luna_creator', document.getElementById('creatorNameInput').value);
     localStorage.setItem('luna_batch', document.getElementById('creatorBatchInput').value);
+    localStorage.setItem('luna_faculties', JSON.stringify(faculties));
 
     const msg = document.getElementById('statusMsg');
     msg.style.display = 'block';
     setTimeout(() => { msg.style.display = 'none'; }, 3000);
   }
 
-  function resetDefaults() {
-    localStorage.removeItem('luna_context');
-    localStorage.removeItem('luna_creator');
-    localStorage.removeItem('luna_batch');
-    location.reload();
-  }
+  renderFacultyList();
 </script>
 
 </body>
