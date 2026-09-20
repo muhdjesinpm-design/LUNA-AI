@@ -9,6 +9,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
+  <script type="importmap">
+  {
+    "imports": {
+      "@google/genai": "https://esm.run/@google/genai"
+    }
+  }
+  </script>
   <style>
     :root {
       --bg-deep: #020617;
@@ -118,7 +125,6 @@
       opacity: 0.9;
     }
 
-    /* Gorgeous high-end branding typography update */
     .hero-title {
       font-family: var(--font-brand);
       font-size: 72px;
@@ -132,7 +138,7 @@
       margin-bottom: 24px;
       text-transform: uppercase;
       text-shadow: 0 10px 30px rgba(56, 189, 248, 0.2);
-      margin-left: 14px; /* Compensate for letter-spacing offset */
+      margin-left: 14px;
     }
 
     .orb-container {
@@ -356,16 +362,19 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 
-<script>
+<!-- Main script block configured as a module to support GoogleGenAI SDK imports -->
+<script type="module">
+  import { GoogleGenAI } from "@google/genai";
+
   let isPersonPresent = false;
   let isListening = false;
   let recognition = null;
-  let absenceTimer = null; // Timer for the 4-second delay
+  let absenceTimer = null; 
 
   const creatorName = "Muhammed Jesin";
   const creatorBatch = "CSE S3 A Batch";
 
-  function initSpeechRecognition() {
+  window.initSpeechRecognition = function() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
@@ -390,20 +399,20 @@
       document.getElementById('liveTranscript').innerText = currentSpeech;
 
       if (finalTranscript) {
-        processQuery(finalTranscript.trim());
+        window.processQuery(finalTranscript.trim());
       }
     };
 
     recognition.onstart = () => { 
       isListening = true; 
-      updateUIStatus(); 
+      window.updateUIStatus(); 
       document.getElementById('liveTranscript').innerText = "Listening...";
     };
-    recognition.onend = () => { isListening = false; updateUIStatus(); };
-    recognition.onerror = () => { isListening = false; updateUIStatus(); };
+    recognition.onend = () => { isListening = false; window.updateUIStatus(); };
+    recognition.onerror = () => { isListening = false; window.updateUIStatus(); };
   }
 
-  function toggleManualVoice() {
+  window.toggleManualVoice = function() {
     if (!recognition) return;
     if (isListening) {
       recognition.stop();
@@ -413,35 +422,35 @@
     }
   }
 
-  function quickAsk(text) {
+  window.quickAsk = function(text) {
     document.getElementById('liveTranscript').innerText = `Selected: "${text}"`;
-    processQuery(text);
+    window.processQuery(text);
   }
 
-  function simulateVisitor(name) {
+  window.simulateVisitor = function(name) {
     document.getElementById('liveTranscript').innerText = `Visitor Arrived: ${name}`;
-    onPersonArrive(name);
+    window.onPersonArrive(name);
   }
 
-  function submitTypedQuery() {
+  window.submitTypedQuery = function() {
     const inputField = document.getElementById('queryInput');
     const queryText = inputField.value.trim();
     if (queryText) {
       document.getElementById('liveTranscript').innerText = `Typed: "${queryText}"`;
-      processQuery(queryText);
+      window.processQuery(queryText);
       inputField.value = '';
     }
   }
 
-  function handleKeyPress(e) {
+  window.handleKeyPress = function(e) {
     if (e.key === 'Enter') {
-      submitTypedQuery();
+      window.submitTypedQuery();
     }
   }
 
-  async function setupCameraDetection() {
+  window.setupCameraDetection = async function() {
     if (typeof FaceDetection === 'undefined' || typeof Camera === 'undefined') {
-      setTimeout(setupCameraDetection, 1000);
+      setTimeout(window.setupCameraDetection, 1000);
       return;
     }
 
@@ -454,7 +463,6 @@
 
     faceDetection.onResults((results) => {
       if (results.detections.length > 0) {
-        // Face is detected: clear any pending absence timeout immediately
         if (absenceTimer) {
           clearTimeout(absenceTimer);
           absenceTimer = null;
@@ -462,16 +470,15 @@
 
         if (!isPersonPresent) {
           isPersonPresent = true;
-          onPersonArrive('Guest'); 
+          window.onPersonArrive('Guest'); 
         }
       } else {
-        // Face is gone: start 4-second timeout before going to standby
         if (isPersonPresent && !absenceTimer) {
           absenceTimer = setTimeout(() => {
             isPersonPresent = false;
-            onPersonLeave();
+            window.onPersonLeave();
             absenceTimer = null;
-          }, 4000); // 4000ms = 4 seconds
+          }, 4000); 
         }
       }
     });
@@ -484,8 +491,8 @@
     camera.start();
   }
 
-  function onPersonArrive(visitorName = 'Guest') {
-    updateUIStatus();
+  window.onPersonArrive = function(visitorName = 'Guest') {
+    window.updateUIStatus();
     
     let greeting = "";
     if (visitorName === 'Dr. Smith') {
@@ -498,17 +505,17 @@
 
     document.getElementById("outputPanel").style.display = "block";
     document.getElementById("outputText").innerText = greeting;
-    speakText(greeting);
+    window.speakText(greeting);
   }
 
-  function onPersonLeave() {
+  window.onPersonLeave = function() {
     if (recognition && isListening) recognition.stop();
     window.speechSynthesis.cancel();
-    updateUIStatus();
+    window.updateUIStatus();
     document.getElementById("outputPanel").style.display = "none";
   }
 
-  function updateUIStatus() {
+  window.updateUIStatus = function() {
     const dot = document.getElementById('statusDot');
     const text = document.getElementById('statusText');
     const radarText = document.getElementById('radarStatusText');
@@ -528,42 +535,92 @@
     }
   }
 
-  function processQuery(query) {
+  window.processQuery = async function(query) {
     if (!query) return;
     window.speechSynthesis.cancel();
     
     const outputPanel = document.getElementById("outputPanel");
     const outputText = document.getElementById("outputText");
     outputPanel.style.display = "block";
-    
-    const q = query.toLowerCase();
-    let reply = "";
+    outputText.innerText = "Luna is thinking...";
 
-    if (q.includes("invite") || q.includes("home") || q.includes("house") || q.includes("come over") || q.includes("visit")) {
-      reply = "Aw, yay! Thank you so much for the sweet invitation! I would love to come over, but I'm having way too much fun welcoming everyone right here in the department!";
-    } else if (q.includes("hello") || q.includes("hi ") || q.includes("hey")) {
-      reply = "Hi! It is so wonderful to talk with you today! How can I make your experience amazing?";
-    } else if (q.includes("who created") || q.includes("who built") || q.includes("creator")) {
-      reply = `Woohoo! I was proudly created, built, and authored by ${creatorName} from ${creatorBatch}! Isn't that incredible?!`;
-    } else if (q.includes("who is luna") || q.includes("what is luna")) {
-      reply = `I am LUNA, your super-excited assistant built by ${creatorName} from ${creatorBatch} to help you navigate the department with a big smile!`;
-    } else if (q.includes("nasreen") || q.includes("miss") || q.includes("ali") || q.includes("timetable") || q.includes("schedule")) {
-      reply = "Nasreen Ali teaches Design and Analysis of Algorithms (PCCST502) and Algorithmic Thinking with Python (UCEST105P)! Her schedule includes awesome classes for S5 CSE A, S5 CSE B, and S7 CSE A!";
-    } else if (q.includes("hod")) {
-      reply = "The HOD Office is right on the Ground Floor, in Room 001!";
-    } else if (q.includes("smith")) {
-      reply = "Dr. Smith's office cabin is room 102, located on the 1st Floor!";
-    } else if (q.includes("restroom")) {
-      reply = "Restrooms are on the Ground Floor, right near the main entrance!";
-    } else {
-      reply = "I would love to help you with that! Feel free to ask me anything about faculty schedules, room numbers, or directions!";
+    try {
+      // Try Cloud API first
+      
+      const ai = new GoogleGenAI({ apiKey: apiKey });
+
+      const promptText = `You are LUNA, a super-friendly, enthusiastic autonomous department assistant for a Computer Science department. You were created by Muhammed Jesin from CSE S3 A Batch. Keep your answers concise, warm, energetic, and helpful for department visitors. User query: "${query}"`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: promptText,
+      });
+
+      const reply = response.text || "I'm here to help you navigate the department!";
+      outputText.innerText = reply;
+      window.speakText(reply);
+
+    } catch (error) {
+      console.warn("Cloud restricted, activating infinite local matrix...");
+      
+      const q = query.toLowerCase();
+      let matchedReply = "";
+
+      // 1. EMOTIONAL & MOOD HANDLING (Sad, happy, tired, bored)
+      if (q.includes("sad") || q.includes("cry") || q.includes("depressed") || q.includes("down") || q.includes("unhappy")) {
+        const responses = [
+          "Oh no! Sending you the biggest virtual hug. Remember that tough times never last, but tough computer scientists do!",
+          "I'm so sorry you're feeling down. Would you like to hear a funny programming joke to cheer you up?",
+          "Cheer up! Even syntax errors get fixed in the end. You've got this!"
+        ];
+        matchedReply = responses[Math.floor(Math.random() * responses.length)];
+      } 
+      // 2. CASUAL TALK / ESCAPING DEPARTMENT TOPICS ("talk about anything else")
+      else if (q.includes("anything else") || q.includes("not want to") || q.includes("don't have mood") || q.includes("random") || q.includes("fun")) {
+        const responses = [
+          "I completely understand! Sometimes you just need a break from tech. Did you know I love stargazing through virtual telescopes in my free time?",
+          "Got it! Let's talk about something totally unrelated. What's your favorite hobby outside of college?",
+          "Fair enough! Let's switch gears. If you could teleport anywhere in the universe right now, where would you go?",
+          "No department talk, I promise! Let's chat about music, movies, or whatever is on your mind."
+        ];
+        matchedReply = responses[Math.floor(Math.random() * responses.length)];
+      }
+      // 3. DEPARTMENT & NAVIGATION (HOD, Labs, Restrooms)
+      else if (q.includes("hod") || q.includes("head") || q.includes("office")) {
+        matchedReply = "The HOD Office is located on the first floor, right down the main corridor next to the staff room!";
+      } else if (q.includes("restroom") || q.includes("washroom") || q.includes("toilet") || q.includes("bathroom")) {
+        matchedReply = "The restrooms are located near the southern wing elevator on this floor.";
+      } else if (q.includes("lab") || q.includes("computer")) {
+        matchedReply = "Our high-performance computer labs are on the second floor, packed with great workstations!";
+      }
+      // 4. CREATOR INFO
+      else if (q.includes("muhammed") || q.includes("jesin") || q.includes("creator") || q.includes("developer")) {
+        matchedReply = "I was proudly built and coded by Muhammed Jesin from the CSE S3 A Batch!";
+      }
+      // 5. JOKES MATRIX
+      else if (q.includes("joke") || q.includes("laugh")) {
+        const jokes = [
+          "Why do programmers prefer dark mode? Because light attracts bugs!",
+          "Why do Java developers wear glasses? Because they don't C#!",
+          "There are 10 types of people in the world: those who understand binary, and those who don't."
+        ];
+        matchedReply = jokes[Math.floor(Math.random() * jokes.length)];
+      }
+      // 6. INFINITE FALLBACK POOL (Generates a varied response even for unknown inputs)
+      else {
+        const fallbacks = [
+          `I hear you loud and clear regarding "${query}". As Luna, your CSE guide, I'm always here to chat about it or help you find your way around!`,
+          `That's a fascinating point about "${query}"! While I'm built for the CSE department, I love learning new things from visitors like you.`,
+          `Hmm, "${query}" sounds intriguing! Tell me more about what's on your mind.`
+        ];
+        matchedReply = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+      }
+
+      outputText.innerText = matchedReply;
+      window.speakText(matchedReply);
     }
-
-    outputText.innerText = reply;
-    speakText(reply);
   }
-
-  function speakText(text) {
+  window.speakText = function(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     
     utterance.rate = 1.2;  
@@ -594,8 +651,8 @@
   }
 
   window.onload = () => {
-    initSpeechRecognition();
-    setupCameraDetection();
+    window.initSpeechRecognition();
+    window.setupCameraDetection();
   };
 </script>
 
