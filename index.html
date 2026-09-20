@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUNA — Autonomous Navigation Kiosk</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "@google/genai": "https://esm.run/@google/genai"
+    }
+  }
+  </script>
+  <!-- Load face-api.js for true 128-point facial recognition -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+
+  <style>
+    :root {
+      --bg-deep: #020617;
+      --surface-glass: rgba(15, 23, 42, 0.75);
+      --border-glass: rgba(56, 189, 248, 0.12);
+      --accent-cyan: #38bdf8;
+      --accent-purple: #818cf8;
+      --accent-emerald: #10b981;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-brand: 'Syne', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-deep);
+      background-image: 
+        radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 20% 90%, rgba(129, 140, 248, 0.06) 0%, transparent 40%),
+        linear-gradient(to bottom, #020617, #010409);
+      min-height: 100vh;
+      font-family: var(--font-sans);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .kiosk-shell {
+      width: 100%;
+      max-width: 920px;
+      background: var(--surface-glass);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border-glass);
+      border-radius: 36px;
+      padding: 52px;
+      box-shadow: 0 40px 120px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .top-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 20px;
+    }
+
+    .system-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 1.2px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glass);
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: all 0.3s ease;
+    }
+    .status-dot.active { background: var(--accent-emerald); box-shadow: 0 0 12px var(--accent-emerald); }
+    .status-dot.listening { background: var(--accent-cyan); box-shadow: 0 0 15px var(--accent-cyan); }
+    .status-dot.creator { background: var(--accent-purple); box-shadow: 0 0 15px var(--accent-purple); }
+    .status-dot.faculty { background: var(--accent-cyan); box-shadow: 0 0 15px var(--accent-cyan); }
+
+    .hero-block {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .brand-subtitle {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 5px;
+      color: var(--accent-cyan);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    .hero-title {
+      font-family: var(--font-brand);
+      font-size: 72px;
+      font-weight: 800;
+      letter-spacing: 14px;
+      background: linear-gradient(135deg, #ffffff 10%, var(--accent-cyan) 50%, var(--accent-purple) 90%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      text-shadow: 0 10px 30px rgba(56, 189, 248, 0.2);
+      margin-left: 14px;
+    }
+
+    .orb-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: transform 0.2s ease;
+    }
+    .orb-container:hover { transform: scale(1.05); }
+
+    .orb-button {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(129, 140, 248, 0.25));
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-cyan);
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.25);
+    }
+
+    .interaction-cue {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+
+    .input-box-container {
+      width: 100%;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .query-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 16px 20px;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      outline: none;
+      transition: all 0.25s ease;
+    }
+
+    .query-input:focus {
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.12);
+    }
+
+    .send-btn {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      border: none;
+      border-radius: 16px;
+      color: var(--bg-deep);
+      font-weight: 700;
+      padding: 0 26px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      transition: opacity 0.2s ease, transform 0.1s ease;
+    }
+    .send-btn:hover { opacity: 0.95; transform: translateY(-1px); }
+
+    .transcript-box {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px dashed var(--border-glass);
+      border-radius: 14px;
+      padding: 14px 20px;
+      margin-bottom: 28px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-secondary);
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+    }
+
+    .transcript-box span {
+      color: var(--accent-cyan);
+      margin-left: 8px;
+    }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 2.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      text-align: center;
+      width: 100%;
+    }
+
+    .chip-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .action-chip {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glass);
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 18px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .action-chip:hover {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .response-card {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 20px;
+      padding: 26px;
+      display: none;
+      text-align: left;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .card-header-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--accent-cyan);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .card-body-text {
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--text-primary);
+    }
+
+    #webcam { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="kiosk-shell">
+  <div class="top-bar">
+    <div class="system-id">// CSE DEPARTMENT KIOSK V5.0 (AI RECOGNITION)</div>
+    <div class="status-indicator">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">LOADING AI MODELS...</span>
+    </div>
+  </div>
+
+  <div class="hero-block">
+    <div class="brand-subtitle">Logical Universal Navigation Assistant</div>
+    <h1 class="hero-title">LUNA</h1>
+    
+    <div class="orb-container" onclick="toggleManualVoice()">
+      <div class="orb-button" id="micBtn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      </div>
+    </div>
+    
+    <div class="interaction-cue" id="radarStatusText">INITIALIZING FACE RECOGNITION...</div>
+  </div>
+
+  <div class="input-box-container">
+    <input type="text" id="queryInput" class="query-input" placeholder="Type visitor name or ask a question..." onkeypress="handleKeyPress(event)">
+    <button class="send-btn" onclick="submitTypedQuery()">Ask Luna</button>
+  </div>
+
+  <div class="transcript-box">
+    Live Speech: <span id="liveTranscript">Waiting for speech...</span>
+  </div>
+
+  <div class="section-label">Quick Actions</div>
+  <div class="chip-grid">
+    <button class="action-chip" onclick="quickAsk('HOD Office')">HOD Office</button>
+    <button class="action-chip" onclick="quickAsk('Restrooms')">Restrooms</button>
+  </div>
+
+  <div class="response-card" id="outputPanel">
+    <div class="card-header-label">// LUNA INTELLIGENCE RESPONSE</div>
+    <div class="card-body-text" id="outputText"></div>
+  </div>
+
+  <video id="webcam" autoplay playsinline></video>
+</div>
+
+<script type="module">
+  import { GoogleGenAI } from "@google/genai";
+
+  let isPersonPresent = false;
+  let isListening = false;
+  let recognition = null;
+  let absenceTimer = null; 
+  let modelsLoaded = false;
+  let creatorFaceDescriptor = null;
+  let knownFacultyFaces = [];
+
+  // Secure API key configuration check
+  function getGeminiApiKey() {
+    let key = localStorage.getItem('luna_gemini_api_key');
+    if (!key) {
+      key = prompt("Please enter your Google Gemini API Key to initialize LUNA's intelligence system:");
+      if (key && key.trim()) {
+        localStorage.setItem('luna_gemini_api_key', key.trim());
+        return key.trim();
+      }
+    }
+    return key || "";
+  }
+
+  window.initSpeechRecognition = function() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onresult = (e) => {
+      let finalTranscript = '';
+      for (let i = e.resultIndex; i < e.results.length; ++i) {
+        if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+      }
+      if (finalTranscript) {
+        document.getElementById('liveTranscript').innerText = `Heard: "${finalTranscript.trim()}"`;
+        window.processQuery(finalTranscript.trim());
+      }
+    };
+
+    recognition.onstart = () => { isListening = true; document.getElementById('liveTranscript').innerText = "Listening..."; };
+    recognition.onend = () => { isListening = false; };
+  }
+
+  window.toggleManualVoice = function() {
+    if (!recognition) return;
+    if (isListening) recognition.stop();
+    else { window.speechSynthesis.cancel(); try { recognition.start(); } catch(e){} }
+  }
+
+  window.quickAsk = function(text) { window.processQuery(text); }
+  window.submitTypedQuery = function() {
+    const input = document.getElementById('queryInput');
+    if (input.value.trim()) { window.processQuery(input.value.trim()); input.value = ''; }
+  }
+  window.handleKeyPress = function(e) { if (e.key === 'Enter') window.submitTypedQuery(); }
+
+  async function loadFaceModels() {
+    document.getElementById('radarStatusText').innerText = "LOADING AI MODELS...";
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+    
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    
+    modelsLoaded = true;
+    document.getElementById('statusText').innerText = "LUNA STANDBY";
+    document.getElementById('radarStatusText').innerText = "SCANNING FOR FACES";
+    
+    await setupFaceDatabases();
+    window.startWebcamScan();
+  }
+
+  async function setupFaceDatabases() {
+    const savedSnapshot = localStorage.getItem('luna_creator_face_snapshot');
+    const creatorName = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
+
+    if (savedSnapshot) {
+      try {
+        const img = await faceapi.fetchImage(savedSnapshot);
+        const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+        if (detection) {
+          creatorFaceDescriptor = { name: creatorName, descriptor: detection.descriptor };
+        }
+      } catch (e) {
+        console.error("Error setting up creator profile:", e);
+      }
+    }
+
+    const storedFaculties = JSON.parse(localStorage.getItem('luna_faculties')) || [];
+    knownFacultyFaces = [];
+
+    for (const faculty of storedFaculties) {
+      if (faculty.photo) {
+        try {
+          const img = await faceapi.fetchImage(faculty.photo);
+          const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+          if (detection) {
+            knownFacultyFaces.push({
+              name: faculty.name,
+              room: faculty.room,
+              floor: faculty.floor,
+              descriptor: detection.descriptor
+            });
+          }
+        } catch (err) {
+          console.error("Could not load face for faculty:", faculty.name);
+        }
+      }
+    }
+  }
+
+  window.startWebcamScan = async function() {
+    const video = document.getElementById('webcam');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+      video.srcObject = stream;
+
+      video.addEventListener('play', () => {
+        setInterval(async () => {
+          if (!modelsLoaded) return;
+
+          const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+
+          if (detection) {
+            if (absenceTimer) { clearTimeout(absenceTimer); absenceTimer = null; }
+
+            if (!isPersonPresent) {
+              isPersonPresent = true;
+              let recognizedIdentity = null;
+
+              if (creatorFaceDescriptor) {
+                const distance = faceapi.euclideanDistance(detection.descriptor, creatorFaceDescriptor.descriptor);
+                if (distance < 0.52) {
+                  recognizedIdentity = { type: 'creator', name: creatorFaceDescriptor.name };
+                }
+              }
+
+              if (!recognizedIdentity && knownFacultyFaces.length > 0) {
+                let bestMatch = null;
+                let lowestDistance = 0.52;
+
+                for (const fac of knownFacultyFaces) {
+                  const dist = faceapi.euclideanDistance(detection.descriptor, fac.descriptor);
+                  if (dist < lowestDistance) {
+                    lowestDistance = dist;
+                    bestMatch = fac;
+                  }
+                }
+
+                if (bestMatch) {
+                  recognizedIdentity = { type: 'faculty', ...bestMatch };
+                }
+              }
+
+              window.onPersonArrive(recognizedIdentity);
+            }
+          } else {
+            if (isPersonPresent && !absenceTimer) {
+              absenceTimer = setTimeout(() => {
+                isPersonPresent = false;
+                window.onPersonLeave();
+                absenceTimer = null;
+              }, 4000);
+            }
+          }
+        }, 1000);
+      });
+    } catch (err) {
+      console.error("Webcam error:", err);
+    }
+  }
+
+  window.onPersonArrive = function(identity = null) {
+    window.updateUIStatus(identity);
+    let greeting = "";
+
+    if (!identity) {
+      greeting = `Hi there! Welcome to the Computer Science Department! How can I help you navigate today?`;
+    } else if (identity.type === 'creator') {
+      const creatorName = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
+      greeting = `Welcome back, ${creatorName}! It's wonderful to see my creator. How can I assist you with department operations today?`;
+    } else if (identity.type === 'faculty') {
+      greeting = `Welcome, ${identity.name}! Your office is located at ${identity.room}, ${identity.floor}. Let me know if you need any department updates or assistance today.`;
+    }
+
+    document.getElementById("outputPanel").style.display = "block";
+    document.getElementById("outputText").innerText = greeting;
+    window.speakText(greeting);
+  }
+
+  window.onPersonLeave = function() {
+    if (recognition && isListening) recognition.stop();
+    window.speechSynthesis.cancel();
+    window.updateUIStatus(null);
+    document.getElementById("outputPanel").style.display = "none";
+  }
+
+  window.updateUIStatus = function(identity = null) {
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    const radarText = document.getElementById('radarStatusText');
+
+    dot.className = 'status-dot';
+    if (!isPersonPresent) {
+      text.innerText = "LUNA STANDBY";
+      radarText.innerText = "SCANNING FOR VISITORS";
+    } else if (identity && identity.type === 'creator') {
+      dot.classList.add('creator');
+      text.innerText = "CREATOR RECOGNIZED";
+      radarText.innerText = `WELCOME BACK, ${identity.name.toUpperCase()}!`;
+    } else if (identity && identity.type === 'faculty') {
+      dot.classList.add('faculty');
+      text.innerText = "FACULTY RECOGNIZED";
+      radarText.innerText = `WELCOME, ${identity.name.toUpperCase()}!`;
+    } else {
+      dot.classList.add('active');
+      text.innerText = "VISITOR DETECTED";
+      radarText.innerText = "TAP ORB OR TYPE TO SPEAK";
+    }
+  }
+
+  window.processQuery = async function(query) {
+    if (!query) return;
+    window.speechSynthesis.cancel();
+    
+    const outputPanel = document.getElementById("outputPanel");
+    const outputText = document.getElementById("outputText");
+    outputPanel.style.display = "block";
+    outputText.innerText = "Luna is thinking...";
+
+    try {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        throw new Error("API key missing");
+      }
+
+      const customCreator = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
+      const savedContext = localStorage.getItem('luna_context') || `Your name is LUNA. Created by ${customCreator}.`;
+      
+      // Correct SDK instantiation with API Key configuration
+      const ai = new GoogleGenAI({ apiKey: apiKey });
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: `${savedContext}\n\nUser query: "${query}"`,
+      });
+
+      const reply = response.text || "I'm here to help you navigate!";
+      outputText.innerText = reply;
+      window.speakText(reply);
+
+    } catch (error) {
+      console.error(error);
+      outputText.innerText = `I hear you regarding "${query}". How can I help?`;
+      window.speakText("I'm ready to help!");
+    }
+  }
+
+  window.speakText = function(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.2; utterance.pitch = 1.5; utterance.volume = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Zira')));
+    if (femaleVoice) utterance.voice = femaleVoice;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  window.onload = () => {
+    window.initSpeechRecognition();
+    loadFaceModels();
+  };
+</script>
+
+</body>
+</html>
