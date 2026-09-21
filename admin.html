@@ -415,7 +415,15 @@
 <video id="hiddenFacultyVideo" autoplay playsinline style="display:none;"></video>
 <canvas id="snapshotCanvas" style="display:none;"></canvas>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+  // 1. Supabase client configuration
+const SUPABASE_URL = 'https://habfsfuyswsgoknybgpu.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_9pAXGd72lF-NlgYVYqb8OQ_8RMteV7J';
+
+// 2. Initialize client
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let faculties = JSON.parse(localStorage.getItem('luna_faculties')) || [];
   let modelsLoaded = false;
   let cameraActive = false;
