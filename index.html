@@ -392,17 +392,25 @@
     }
   }
 
-  // Secure API key configuration check
-  function getGeminiApiKey() {
-    let key = localStorage.getItem('luna_gemini_api_key');
-    if (!key) {
-      key = prompt("Please enter your Google Gemini API Key to initialize LUNA's intelligence system:");
-      if (key && key.trim()) {
-        localStorage.setItem('luna_gemini_api_key', key.trim());
-        return key.trim();
+  // Load API key from Supabase without prompting visitors
+  async function getGeminiApiKey() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('system_config')
+        .select('value')
+        .eq('key', 'gemini_api_key')
+        .single();
+
+      if (error || !data) {
+        console.error("Could not fetch API key from Supabase:", error);
+        return "";
       }
+
+      return data.value;
+    } catch (err) {
+      console.error("Error reading system config:", err);
+      return "";
     }
-    return key || "";
   }
 
   window.initSpeechRecognition = function() {
@@ -619,7 +627,7 @@
     outputText.innerText = "Luna is thinking...";
 
     try {
-      const apiKey = getGeminiApiKey();
+      const apiKey = await getGeminiApiKey();
       if (!apiKey) {
         throw new Error("API key missing");
       }
