@@ -9,6 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script type="importmap">
   {
     "imports": {
@@ -358,6 +361,11 @@
 <script type="module">
   import { GoogleGenAI } from "@google/genai";
 
+  // Supabase client configuration
+  const SUPABASE_URL = 'https://habfsfuyswsgoknybgpu.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_9pAXGd72lF-NlgYVYqb8OQ_8RMteV7J';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   let isPersonPresent = false;
   let isListening = false;
   let recognition = null;
@@ -365,6 +373,24 @@
   let modelsLoaded = false;
   let creatorFaceDescriptor = null;
   let knownFacultyFaces = [];
+  let liveFacultyList = [];
+
+  // Fetch live faculty data from Supabase
+  async function fetchLiveFaculties() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('faculty')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      liveFacultyList = data || [];
+      return liveFacultyList;
+    } catch (err) {
+      console.error("Error fetching faculty records from Supabase:", err);
+      return [];
+    }
+  }
 
   // Secure API key configuration check
   function getGeminiApiKey() {
@@ -434,7 +460,7 @@
 
   async function setupFaceDatabases() {
     const savedSnapshot = localStorage.getItem('luna_creator_face_snapshot');
-    const creatorName = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
+    const creatorName = localStorage.getItem('luna_creator') || 'Jesin';
 
     if (savedSnapshot) {
       try {
@@ -448,24 +474,26 @@
       }
     }
 
-    const storedFaculties = JSON.parse(localStorage.getItem('luna_faculties')) || [];
+    // Load live faculty list from Supabase
+    await fetchLiveFaculties();
     knownFacultyFaces = [];
 
-    for (const faculty of storedFaculties) {
-      if (faculty.photo) {
+    for (const faculty of liveFacultyList) {
+      const photoData = faculty.details?.photo;
+      if (photoData) {
         try {
-          const img = await faceapi.fetchImage(faculty.photo);
+          const img = await faceapi.fetchImage(photoData);
           const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
           if (detection) {
             knownFacultyFaces.push({
               name: faculty.name,
-              room: faculty.room,
-              floor: faculty.floor,
+              room: faculty.details?.room || (faculty.cabin ? faculty.cabin.split(' (')[0] : 'N/A'),
+              floor: faculty.details?.floor || '',
               descriptor: detection.descriptor
             });
           }
         } catch (err) {
-          console.error("Could not load face for faculty:", faculty.name);
+          console.error("Could not load face descriptor for faculty:", faculty.name);
         }
       }
     }
@@ -539,10 +567,10 @@
     if (!identity) {
       greeting = `Hi there! Welcome to the Computer Science Department! How can I help you navigate today?`;
     } else if (identity.type === 'creator') {
-      const creatorName = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
+      const creatorName = localStorage.getItem('luna_creator') || 'Jesin';
       greeting = `Welcome back, ${creatorName}! It's wonderful to see my creator. How can I assist you with department operations today?`;
     } else if (identity.type === 'faculty') {
-      greeting = `Welcome, ${identity.name}! Your office is located at ${identity.room}, ${identity.floor}. Let me know if you need any department updates or assistance today.`;
+      greeting = `Welcome, ${identity.name}! Your office is located at ${identity.room} ${identity.floor ? '(' + identity.floor + ')' : ''}. Let me know if you need any department updates or assistance today.`;
     }
 
     document.getElementById("outputPanel").style.display = "block";
@@ -596,15 +624,39 @@
         throw new Error("API key missing");
       }
 
-      const customCreator = localStorage.getItem('luna_creator') || 'Muhammed Jesin';
-      const savedContext = localStorage.getItem('luna_context') || `Your name is LUNA. Created by ${customCreator}.`;
-      
-      // Correct SDK instantiation with API Key configuration
+      // If live faculty hasn't loaded yet, fetch it
+      if (liveFacultyList.length === 0) {
+        await fetchLiveFaculties();
+      }
+
+      // Format live Supabase faculty directory into prompt
+      let facultyDirectoryContext = "\n\nLive Faculty Members Directory:\n";
+      if (liveFacultyList.length > 0) {
+        liveFacultyList.forEach(f => {
+          const room = f.details?.room || (f.cabin ? f.cabin.split(' (')[0] : 'N/A');
+          const floor = f.details?.floor || (f.cabin && f.cabin.includes('(') ? f.cabin.split('(')[1].replace(')', '') : 'N/A');
+          const mentor = f.details?.isMentor || 'No';
+          const mentorDetails = f.details?.mentorDetails ? ` [Mentor for: ${f.details.mentorDetails}]` : '';
+          const timetable = f.details?.timetable ? ` | Schedule: ${f.details.timetable}` : '';
+
+          facultyDirectoryContext += `- ${f.name}: Room ${room}, Floor: ${floor} | Mentor: ${mentor}${mentorDetails}${timetable}\n`;
+        });
+      } else {
+        facultyDirectoryContext += "No faculty members currently registered.\n";
+      }
+
+      const customCreator = localStorage.getItem('luna_creator') || 'Jesin';
+      const baseContext = localStorage.getItem('luna_context') 
+        ? localStorage.getItem('luna_context').split("\n\nFaculty Members Directory:")[0]
+        : `Your name is LUNA (Logical Universal Navigation Assistant). You are the autonomous AI receptionist and navigation guide for the Computer Science & Engineering (CSE) Department. Created by ${customCreator}.`;
+
+      const completePrompt = `${baseContext}${facultyDirectoryContext}\n\nVisitor query: "${query}"\nPlease answer accurately using the directory when asked about teachers, rooms, floors, or schedules.`;
+
       const ai = new GoogleGenAI({ apiKey: apiKey });
 
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
-        contents: `${savedContext}\n\nUser query: "${query}"`,
+        contents: completePrompt,
       });
 
       const reply = response.text || "I'm here to help you navigate!";
@@ -613,8 +665,8 @@
 
     } catch (error) {
       console.error(error);
-      outputText.innerText = `I hear you regarding "${query}". How can I help?`;
-      window.speakText("I'm ready to help!");
+      outputText.innerText = `I'm having trouble answering right now. Please check console or try again.`;
+      window.speakText("Sorry, I encountered an error processing that request.");
     }
   }
 
