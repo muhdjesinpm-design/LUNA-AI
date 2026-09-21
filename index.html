@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LUNA — Autonomous Navigation Kiosk</title>
+  <title>Department Directory & Navigation Kiosk</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 
   <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- Google GenAI SDK -->
   <script type="importmap">
   {
     "imports": {
@@ -19,293 +20,324 @@
     }
   }
   </script>
-  <!-- Load face-api.js for true 128-point facial recognition -->
+
+  <!-- Face Detection Library -->
   <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
 
   <style>
     :root {
-      --bg-deep: #020617;
-      --surface-glass: rgba(15, 23, 42, 0.75);
-      --border-glass: rgba(56, 189, 248, 0.12);
-      --accent-cyan: #38bdf8;
-      --accent-purple: #818cf8;
-      --accent-emerald: #10b981;
-      --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --font-sans: 'Plus Jakarta Sans', sans-serif;
-      --font-brand: 'Syne', sans-serif;
+      --bg-pitch: #070709;
+      --bg-surface: #0f0f14;
+      --bg-surface-elevated: #16161f;
+      --bg-input: #1a1a24;
+      --border-subtle: #272733;
+      --border-hover: rgba(249, 115, 22, 0.4);
+      --accent-orange: #f97316;
+      --accent-orange-hover: #ea580c;
+      --accent-orange-glow: rgba(249, 115, 22, 0.25);
+      --accent-amber: #fbbf24;
+      --text-main: #fafaf9;
+      --text-secondary: #a8a29e;
+      --text-muted: #78716c;
+      --status-green: #10b981;
+      --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background-color: var(--bg-deep);
+      background-color: var(--bg-pitch);
       background-image: 
-        radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 20% 90%, rgba(129, 140, 248, 0.06) 0%, transparent 40%),
-        linear-gradient(to bottom, #020617, #010409);
+        radial-gradient(circle at 50% 15%, rgba(249, 115, 22, 0.05) 0%, transparent 60%),
+        linear-gradient(to bottom, #070709, #040405);
       min-height: 100vh;
-      font-family: var(--font-sans);
-      color: var(--text-primary);
+      font-family: var(--font-main);
+      color: var(--text-main);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px 20px;
+      padding: 30px 16px;
     }
 
     .kiosk-shell {
       width: 100%;
-      max-width: 920px;
-      background: var(--surface-glass);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid var(--border-glass);
-      border-radius: 36px;
-      padding: 52px;
-      box-shadow: 0 40px 120px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      max-width: 880px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 36px 40px;
+      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.8), 0 0 40px -15px var(--accent-orange-glow);
       display: flex;
       flex-direction: column;
-      align-items: center;
+      gap: 24px;
+      position: relative;
     }
 
-    .top-bar {
-      width: 100%;
+    /* Top Institutional Header */
+    .kiosk-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 32px;
-      border-bottom: 1px solid var(--border-glass);
-      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 18px;
     }
 
-    .system-id {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: 2.5px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-    }
-
-    .status-indicator {
+    .dept-brand {
       display: flex;
       align-items: center;
+      gap: 12px;
+    }
+
+    .dept-brand-icon {
+      width: 34px;
+      height: 34px;
+      background: rgba(249, 115, 22, 0.1);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-orange);
+    }
+
+    .dept-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.2px;
+    }
+
+    .dept-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
       gap: 8px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: 1.2px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border-glass);
       padding: 6px 14px;
-      border-radius: 20px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 100px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      letter-spacing: 0.5px;
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: var(--text-muted);
       transition: all 0.3s ease;
     }
-    .status-dot.active { background: var(--accent-emerald); box-shadow: 0 0 12px var(--accent-emerald); }
-    .status-dot.listening { background: var(--accent-cyan); box-shadow: 0 0 15px var(--accent-cyan); }
-    .status-dot.creator { background: var(--accent-purple); box-shadow: 0 0 15px var(--accent-purple); }
-    .status-dot.faculty { background: var(--accent-cyan); box-shadow: 0 0 15px var(--accent-cyan); }
+    .status-dot.ready { background: var(--status-green); box-shadow: 0 0 8px var(--status-green); }
+    .status-dot.listening { background: var(--accent-orange); box-shadow: 0 0 12px var(--accent-orange); }
 
-    .hero-block {
-      text-align: center;
+    /* Center Stage: Interactive Voice Globe */
+    .hero-stage {
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 100%;
-      margin-bottom: 20px;
-    }
-
-    .brand-subtitle {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: 5px;
-      color: var(--accent-cyan);
-      margin-bottom: 10px;
-      text-transform: uppercase;
-      opacity: 0.9;
-    }
-
-    .hero-title {
-      font-family: var(--font-brand);
-      font-size: 72px;
-      font-weight: 800;
-      letter-spacing: 14px;
-      background: linear-gradient(135deg, #ffffff 10%, var(--accent-cyan) 50%, var(--accent-purple) 90%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      line-height: 1.1;
-      margin-bottom: 24px;
-      text-transform: uppercase;
-      text-shadow: 0 10px 30px rgba(56, 189, 248, 0.2);
-      margin-left: 14px;
-    }
-
-    .orb-container {
       position: relative;
-      width: 120px;
-      height: 120px;
+      padding-top: 6px;
+    }
+
+    .globe-wrap {
+      position: relative;
+      width: 200px;
+      height: 200px;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
       margin-bottom: 12px;
-      transition: transform 0.2s ease;
     }
-    .orb-container:hover { transform: scale(1.05); }
 
-    .orb-button {
-      width: 64px;
-      height: 64px;
+    #globeCanvas {
+      width: 200px;
+      height: 200px;
       border-radius: 50%;
-      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(129, 140, 248, 0.25));
-      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, transparent 70%);
+    }
+
+    .mic-center-trigger {
+      position: absolute;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: rgba(15, 15, 20, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(249, 115, 22, 0.4);
+      color: var(--accent-orange);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--accent-cyan);
-      box-shadow: 0 0 35px rgba(56, 189, 248, 0.25);
-    }
-
-    .interaction-cue {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: var(--text-muted);
-      margin-bottom: 24px;
-      text-transform: uppercase;
-    }
-
-    .input-box-container {
-      width: 100%;
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .query-input {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border-glass);
-      border-radius: 16px;
-      padding: 16px 20px;
-      color: var(--text-primary);
-      font-family: var(--font-sans);
-      font-size: 15px;
-      outline: none;
-      transition: all 0.25s ease;
-    }
-
-    .query-input:focus {
-      border-color: rgba(56, 189, 248, 0.5);
-      background: rgba(255, 255, 255, 0.06);
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.12);
-    }
-
-    .send-btn {
-      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-      border: none;
-      border-radius: 16px;
-      color: var(--bg-deep);
-      font-weight: 700;
-      padding: 0 26px;
       cursor: pointer;
-      font-family: var(--font-sans);
+      transition: all 0.25s ease;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    }
+    .mic-center-trigger:hover {
+      border-color: var(--accent-orange);
+      transform: scale(1.08);
+      box-shadow: 0 0 25px var(--accent-orange-glow);
+    }
+    .mic-center-trigger.active {
+      background: var(--accent-orange);
+      border-color: var(--accent-amber);
+      color: #000;
+      box-shadow: 0 0 30px var(--accent-orange);
+    }
+
+    .greeting-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .greeting-subtext {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Modern Query Input */
+    .input-bar {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 13px 18px;
+      font-family: inherit;
       font-size: 14px;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .search-input:focus {
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 0 3px var(--accent-orange-glow);
+    }
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-btn {
+      background: linear-gradient(135deg, var(--accent-orange), var(--accent-orange-hover));
+      border: none;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 0 24px;
+      border-radius: 12px;
+      cursor: pointer;
       transition: opacity 0.2s ease, transform 0.1s ease;
     }
-    .send-btn:hover { opacity: 0.95; transform: translateY(-1px); }
-
-    .transcript-box {
-      width: 100%;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px dashed var(--border-glass);
-      border-radius: 14px;
-      padding: 14px 20px;
-      margin-bottom: 28px;
-      font-family: var(--font-mono);
-      font-size: 13px;
-      color: var(--text-secondary);
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-    }
-
-    .transcript-box span {
-      color: var(--accent-cyan);
-      margin-left: 8px;
-    }
-
-    .section-label {
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      letter-spacing: 2.5px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      text-transform: uppercase;
-      text-align: center;
-      width: 100%;
-    }
-
-    .chip-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      margin-bottom: 24px;
-    }
-
-    .action-chip {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border-glass);
-      color: var(--text-secondary);
-      font-family: var(--font-sans);
-      font-size: 13px;
-      font-weight: 500;
-      padding: 10px 18px;
-      border-radius: 14px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .action-chip:hover {
-      background: rgba(56, 189, 248, 0.08);
-      border-color: rgba(56, 189, 248, 0.3);
-      color: var(--accent-cyan);
+    .search-btn:hover {
+      opacity: 0.95;
       transform: translateY(-1px);
     }
 
-    .response-card {
+    /* Live Speech Bar */
+    .transcript-bar {
       width: 100%;
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid rgba(56, 189, 248, 0.2);
-      border-radius: 20px;
-      padding: 26px;
-      display: none;
-      text-align: left;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      background: rgba(22, 22, 31, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      min-height: 40px;
+    }
+    .transcript-bar span {
+      color: var(--accent-amber);
+      font-weight: 500;
+      margin-left: 6px;
     }
 
-    .card-header-label {
+    /* Common Query Pills */
+    .pills-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pills-label {
+      font-size: 11px;
       font-family: var(--font-mono);
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: var(--accent-cyan);
-      margin-bottom: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
       text-transform: uppercase;
+      letter-spacing: 0.8px;
     }
 
-    .card-body-text {
-      font-size: 15px;
-      line-height: 1.65;
-      color: var(--text-primary);
+    .pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .pill-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text-main);
+      background: #1e1e2b;
+      transform: translateY(-1px);
+    }
+
+    /* Response Card */
+    .response-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid rgba(249, 115, 22, 0.25);
+      border-radius: 14px;
+      padding: 22px;
+      display: none;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .response-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--accent-orange);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .response-body {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-main);
     }
 
     #webcam { display: none; }
@@ -314,46 +346,69 @@
 <body>
 
 <div class="kiosk-shell">
-  <div class="top-bar">
-    <div class="system-id">// CSE DEPARTMENT KIOSK V5.0 (AI RECOGNITION)</div>
-    <div class="status-indicator">
-      <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">LOADING AI MODELS...</span>
-    </div>
-  </div>
-
-  <div class="hero-block">
-    <div class="brand-subtitle">Logical Universal Navigation Assistant</div>
-    <h1 class="hero-title">LUNA</h1>
-    
-    <div class="orb-container" onclick="toggleManualVoice()">
-      <div class="orb-button" id="micBtn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+  <!-- Institutional Header -->
+  <header class="kiosk-header">
+    <div class="dept-brand">
+      <div class="dept-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path><path d="M6 6h10"></path><path d="M6 10h10"></path></svg>
+      </div>
+      <div>
+        <div class="dept-title">Department of Computer Science & Engineering</div>
+        <div class="dept-subtitle">Smart Reception & Navigation Kiosk</div>
       </div>
     </div>
-    
-    <div class="interaction-cue" id="radarStatusText">INITIALIZING FACE RECOGNITION...</div>
+    <div class="status-badge">
+      <span class="status-dot ready" id="statusDot"></span>
+      <span id="statusText">SYSTEM READY</span>
+    </div>
+  </header>
+
+  <!-- Interactive Center Stage: Dynamic Audio Net Globe -->
+  <section class="hero-stage">
+    <div class="globe-wrap">
+      <canvas id="globeCanvas" width="240" height="240"></canvas>
+      <button class="mic-center-trigger" id="micBtn" type="button" title="Click or tap to speak">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+      </button>
+    </div>
+    <h1 class="greeting-title" id="greetingHeader">How can I assist you?</h1>
+    <p class="greeting-subtext" id="greetingSubtext">Tap the globe to speak, or search faculty, offices, and timetables below.</p>
+  </section>
+
+  <!-- Search Bar -->
+  <div class="input-bar">
+    <input type="text" id="queryInput" class="search-input" placeholder="Ask about faculty cabin, floor number, mentor details, or schedule...">
+    <button class="search-btn" id="searchBtn" type="button">Ask LUNA</button>
   </div>
 
-  <div class="input-box-container">
-    <input type="text" id="queryInput" class="query-input" placeholder="Type visitor name or ask a question..." onkeypress="handleKeyPress(event)">
-    <button class="send-btn" onclick="submitTypedQuery()">Ask Luna</button>
+  <!-- Real-time Speech Feedback -->
+  <div class="transcript-bar">
+    Status: <span id="transcriptText">Ready for inquiry...</span>
   </div>
 
-  <div class="transcript-box">
-    Live Speech: <span id="liveTranscript">Waiting for speech...</span>
+  <!-- Common Navigation Pills -->
+  <div class="pills-section">
+    <div class="pills-label">Quick Destinations</div>
+    <div class="pills-row">
+      <button class="pill-btn" type="button" data-query="Where is the HOD Office?">HOD Office</button>
+      <button class="pill-btn" type="button" data-query="Where are the restrooms located?">Restrooms</button>
+      <button class="pill-btn" type="button" data-query="List all faculty members in the department.">Faculty Directory</button>
+      <button class="pill-btn" type="button" data-query="Where is the Seminar Hall?">Seminar Hall</button>
+    </div>
   </div>
 
-  <div class="section-label">Quick Actions</div>
-  <div class="chip-grid">
-    <button class="action-chip" onclick="quickAsk('HOD Office')">HOD Office</button>
-    <button class="action-chip" onclick="quickAsk('Restrooms')">Restrooms</button>
-  </div>
-
-  <div class="response-card" id="outputPanel">
-    <div class="card-header-label">// LUNA INTELLIGENCE RESPONSE</div>
-    <div class="card-body-text" id="outputText"></div>
-  </div>
+  <!-- Response Display Panel -->
+  <article class="response-card" id="responseCard">
+    <div class="response-tag">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      LUNA Information System
+    </div>
+    <div class="response-body" id="responseText"></div>
+  </article>
 
   <video id="webcam" autoplay playsinline></video>
 </div>
@@ -361,21 +416,201 @@
 <script type="module">
   import { GoogleGenAI } from "@google/genai";
 
-  // Supabase client configuration
+  // Supabase Configuration
   const SUPABASE_URL = 'https://habfsfuyswsgoknybgpu.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_9pAXGd72lF-NlgYVYqb8OQ_8RMteV7J';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let isPersonPresent = false;
   let isListening = false;
+  let isPersonPresent = false;
   let recognition = null;
-  let absenceTimer = null; 
+  let absenceTimer = null;
   let modelsLoaded = false;
   let creatorFaceDescriptor = null;
   let knownFacultyFaces = [];
   let liveFacultyList = [];
 
-  // Fetch live faculty data from Supabase
+  // Web Audio Visualizer State
+  let audioContext = null;
+  let analyser = null;
+  let micDataArray = null;
+  let voiceVolume = 0;
+
+  // 1. Audio Visualizer Setup
+  async function initAudioVisualizer() {
+    if (audioContext) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      audioContext = new AudioCtx();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 64;
+      micDataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+    } catch (e) {
+      console.warn("Microphone audio visualizer stream not initialized:", e);
+    }
+  }
+
+  // 2. Continuous 3D Net-Like Globe Animation
+  const canvas = document.getElementById('globeCanvas');
+  const ctx = canvas.getContext('2d');
+  const GLOBE_POINTS = [];
+  const RINGS = 9;
+  const POINTS_PER_RING = 16;
+  const BASE_RADIUS = 72;
+
+  // Generate geodesic sphere lattice points
+  for (let i = 0; i < RINGS; i++) {
+    const phi = (Math.PI * (i + 1)) / (RINGS + 1);
+    for (let j = 0; j < POINTS_PER_RING; j++) {
+      const theta = (2 * Math.PI * j) / POINTS_PER_RING;
+      GLOBE_POINTS.push({
+        x: Math.sin(phi) * Math.cos(theta),
+        y: Math.cos(phi),
+        z: Math.sin(phi) * Math.sin(theta),
+        ring: i,
+        idx: j
+      });
+    }
+  }
+
+  let rotX = 0.2;
+  let rotY = 0;
+
+  function renderGlobe() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Read voice amplitude if available
+    if (analyser && micDataArray) {
+      analyser.getByteFrequencyData(micDataArray);
+      let sum = 0;
+      for (let i = 0; i < micDataArray.length; i++) sum += micDataArray[i];
+      const avg = sum / micDataArray.length;
+      voiceVolume += (avg - voiceVolume) * 0.25; // Smooth interpolation
+    } else {
+      voiceVolume *= 0.9;
+    }
+
+    const currentRadius = BASE_RADIUS + (voiceVolume * 0.38);
+    const speed = 0.012 + (voiceVolume * 0.0006);
+    rotY += speed;
+    rotX += speed * 0.35;
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const fov = 170;
+
+    // Project 3D nodes to 2D
+    const projected = GLOBE_POINTS.map(pt => {
+      // Y-axis rotation
+      let x1 = pt.x * Math.cos(rotY) - pt.z * Math.sin(rotY);
+      let z1 = pt.x * Math.sin(rotY) + pt.z * Math.cos(rotY);
+      // X-axis rotation
+      let y2 = pt.y * Math.cos(rotX) - z1 * Math.sin(rotX);
+      let z2 = pt.y * Math.sin(rotX) + z1 * Math.cos(rotX);
+
+      const rad = currentRadius + Math.sin(pt.idx + rotY * 3) * (voiceVolume * 0.08);
+      const scale = fov / (fov + z2 * rad);
+      return {
+        x: cx + x1 * rad * scale,
+        y: cy + y2 * rad * scale,
+        z: z2,
+        scale: scale,
+        ring: pt.ring,
+        idx: pt.idx
+      };
+    });
+
+    // Draw net lines between neighboring nodes
+    const orangeAlpha = isListening ? 0.45 + (voiceVolume / 255) * 0.4 : 0.22;
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i < projected.length; i++) {
+      const p1 = projected[i];
+      if (p1.z < -0.6) continue; // Skip hidden backface lines
+
+      for (let j = i + 1; j < projected.length; j++) {
+        const p2 = projected[j];
+        if (p2.z < -0.6) continue;
+
+        // Connect nodes on the same ring or adjacent rings
+        const isSameRingNeighbor = p1.ring === p2.ring && Math.abs(p1.idx - p2.idx) === 1;
+        const isRingWrap = p1.ring === p2.ring && Math.abs(p1.idx - p2.idx) === (POINTS_PER_RING - 1);
+        const isAdjacentRing = Math.abs(p1.ring - p2.ring) === 1 && p1.idx === p2.idx;
+
+        if (isSameRingNeighbor || isRingWrap || isAdjacentRing) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(249, 115, 22, ${orangeAlpha * ((p1.z + 1) / 2)})`;
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw net vertices / particle dots
+    for (const p of projected) {
+      if (p.z < -0.7) continue;
+      const alpha = ((p.z + 1) / 2) * (isListening ? 0.9 : 0.6);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(1, p.scale * 1.8), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(251, 191, 36, ${alpha})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(renderGlobe);
+  }
+  requestAnimationFrame(renderGlobe);
+
+  // 3. API Key Resolution (Supabase first, localStorage fallback, prompt as last resort)
+  async function resolveApiKey() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('system_config')
+        .select('value')
+        .eq('key', 'gemini_api_key')
+        .maybeSingle();
+
+      if (!error && data?.value) {
+        return data.value;
+      }
+    } catch (e) {
+      console.warn("Could not retrieve key from Supabase:", e);
+    }
+
+    let localKey = localStorage.getItem('luna_gemini_api_key');
+    if (!localKey) {
+      localKey = prompt("Please enter your Google Gemini API Key to initialize the assistant:");
+      if (localKey && localKey.trim()) {
+        localStorage.setItem('luna_gemini_api_key', localKey.trim());
+        return localKey.trim();
+      }
+    }
+    return localKey || "";
+  }
+
+// 4. Fetch Live Faculty Records From Supabase
+  let isQueryProcessing = false;
+
+  async function fetchLiveFaculties() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('faculty')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      liveFacultyList = data || [];
+      return liveFacultyList;
+    } catch (err) {
+      console.error("Error fetching faculty records from Supabase:", err);
+      return [];
+    }
+  }
+  // Fetch Live Faculty Records from Supabase
   async function fetchLiveFaculties() {
     try {
       const { data, error } = await supabaseClient
@@ -392,253 +627,40 @@
     }
   }
 
-  // Load API key from Supabase without prompting visitors
-  async function getGeminiApiKey() {
-    try {
-      const { data, error } = await supabaseClient
-        .from('system_config')
-        .select('value')
-        .eq('key', 'gemini_api_key')
-        .single();
-
-      if (error || !data) {
-        console.error("Could not fetch API key from Supabase:", error);
-        return "";
-      }
-
-      return data.value;
-    } catch (err) {
-      console.error("Error reading system config:", err);
-      return "";
-    }
-  }
-
-  window.initSpeechRecognition = function() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = true;
-
-    recognition.onresult = (e) => {
-      let finalTranscript = '';
-      for (let i = e.resultIndex; i < e.results.length; ++i) {
-        if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
-      }
-      if (finalTranscript) {
-        document.getElementById('liveTranscript').innerText = `Heard: "${finalTranscript.trim()}"`;
-        window.processQuery(finalTranscript.trim());
-      }
-    };
-
-    recognition.onstart = () => { isListening = true; document.getElementById('liveTranscript').innerText = "Listening..."; };
-    recognition.onend = () => { isListening = false; };
-  }
-
-  window.toggleManualVoice = function() {
-    if (!recognition) return;
-    if (isListening) recognition.stop();
-    else { window.speechSynthesis.cancel(); try { recognition.start(); } catch(e){} }
-  }
-
-  window.quickAsk = function(text) { window.processQuery(text); }
-  window.submitTypedQuery = function() {
-    const input = document.getElementById('queryInput');
-    if (input.value.trim()) { window.processQuery(input.value.trim()); input.value = ''; }
-  }
-  window.handleKeyPress = function(e) { if (e.key === 'Enter') window.submitTypedQuery(); }
-
-  async function loadFaceModels() {
-    document.getElementById('radarStatusText').innerText = "LOADING AI MODELS...";
-    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+  // 5. Resilient Query Processing with 503 Auto-Retry
+  async function handleQuery(query, retryCount = 0) {
+    if (!query || !query.trim()) return;
     
-    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    
-    modelsLoaded = true;
-    document.getElementById('statusText').innerText = "LUNA STANDBY";
-    document.getElementById('radarStatusText').innerText = "SCANNING FOR FACES";
-    
-    await setupFaceDatabases();
-    window.startWebcamScan();
-  }
-
-  async function setupFaceDatabases() {
-    const savedSnapshot = localStorage.getItem('luna_creator_face_snapshot');
-    const creatorName = localStorage.getItem('luna_creator') || 'Jesin';
-
-    if (savedSnapshot) {
-      try {
-        const img = await faceapi.fetchImage(savedSnapshot);
-        const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-        if (detection) {
-          creatorFaceDescriptor = { name: creatorName, descriptor: detection.descriptor };
-        }
-      } catch (e) {
-        console.error("Error setting up creator profile:", e);
-      }
+    // Prevent overlapping simultaneous requests
+    if (isQueryProcessing && retryCount === 0) {
+      console.warn("A query is already in progress. Ignoring duplicate request.");
+      return;
     }
 
-    // Load live faculty list from Supabase
-    await fetchLiveFaculties();
-    knownFacultyFaces = [];
-
-    for (const faculty of liveFacultyList) {
-      const photoData = faculty.details?.photo;
-      if (photoData) {
-        try {
-          const img = await faceapi.fetchImage(photoData);
-          const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-          if (detection) {
-            knownFacultyFaces.push({
-              name: faculty.name,
-              room: faculty.details?.room || (faculty.cabin ? faculty.cabin.split(' (')[0] : 'N/A'),
-              floor: faculty.details?.floor || '',
-              descriptor: detection.descriptor
-            });
-          }
-        } catch (err) {
-          console.error("Could not load face descriptor for faculty:", faculty.name);
-        }
-      }
-    }
-  }
-
-  window.startWebcamScan = async function() {
-    const video = document.getElementById('webcam');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-      video.srcObject = stream;
-
-      video.addEventListener('play', () => {
-        setInterval(async () => {
-          if (!modelsLoaded) return;
-
-          const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-
-          if (detection) {
-            if (absenceTimer) { clearTimeout(absenceTimer); absenceTimer = null; }
-
-            if (!isPersonPresent) {
-              isPersonPresent = true;
-              let recognizedIdentity = null;
-
-              if (creatorFaceDescriptor) {
-                const distance = faceapi.euclideanDistance(detection.descriptor, creatorFaceDescriptor.descriptor);
-                if (distance < 0.52) {
-                  recognizedIdentity = { type: 'creator', name: creatorFaceDescriptor.name };
-                }
-              }
-
-              if (!recognizedIdentity && knownFacultyFaces.length > 0) {
-                let bestMatch = null;
-                let lowestDistance = 0.52;
-
-                for (const fac of knownFacultyFaces) {
-                  const dist = faceapi.euclideanDistance(detection.descriptor, fac.descriptor);
-                  if (dist < lowestDistance) {
-                    lowestDistance = dist;
-                    bestMatch = fac;
-                  }
-                }
-
-                if (bestMatch) {
-                  recognizedIdentity = { type: 'faculty', ...bestMatch };
-                }
-              }
-
-              window.onPersonArrive(recognizedIdentity);
-            }
-          } else {
-            if (isPersonPresent && !absenceTimer) {
-              absenceTimer = setTimeout(() => {
-                isPersonPresent = false;
-                window.onPersonLeave();
-                absenceTimer = null;
-              }, 4000);
-            }
-          }
-        }, 1000);
-      });
-    } catch (err) {
-      console.error("Webcam error:", err);
-    }
-  }
-
-  window.onPersonArrive = function(identity = null) {
-    window.updateUIStatus(identity);
-    let greeting = "";
-
-    if (!identity) {
-      greeting = `Hi there! Welcome to the Computer Science Department! How can I help you navigate today?`;
-    } else if (identity.type === 'creator') {
-      const creatorName = localStorage.getItem('luna_creator') || 'Jesin';
-      greeting = `Welcome back, ${creatorName}! It's wonderful to see my creator. How can I assist you with department operations today?`;
-    } else if (identity.type === 'faculty') {
-      greeting = `Welcome, ${identity.name}! Your office is located at ${identity.room} ${identity.floor ? '(' + identity.floor + ')' : ''}. Let me know if you need any department updates or assistance today.`;
-    }
-
-    document.getElementById("outputPanel").style.display = "block";
-    document.getElementById("outputText").innerText = greeting;
-    window.speakText(greeting);
-  }
-
-  window.onPersonLeave = function() {
-    if (recognition && isListening) recognition.stop();
+    isQueryProcessing = true;
     window.speechSynthesis.cancel();
-    window.updateUIStatus(null);
-    document.getElementById("outputPanel").style.display = "none";
-  }
 
-  window.updateUIStatus = function(identity = null) {
-    const dot = document.getElementById('statusDot');
-    const text = document.getElementById('statusText');
-    const radarText = document.getElementById('radarStatusText');
-
-    dot.className = 'status-dot';
-    if (!isPersonPresent) {
-      text.innerText = "LUNA STANDBY";
-      radarText.innerText = "SCANNING FOR VISITORS";
-    } else if (identity && identity.type === 'creator') {
-      dot.classList.add('creator');
-      text.innerText = "CREATOR RECOGNIZED";
-      radarText.innerText = `WELCOME BACK, ${identity.name.toUpperCase()}!`;
-    } else if (identity && identity.type === 'faculty') {
-      dot.classList.add('faculty');
-      text.innerText = "FACULTY RECOGNIZED";
-      radarText.innerText = `WELCOME, ${identity.name.toUpperCase()}!`;
+    const responseCard = document.getElementById("responseCard");
+    const responseText = document.getElementById("responseText");
+    responseCard.style.display = "block";
+    
+    if (retryCount === 0) {
+      responseText.innerText = "Retrieving information...";
     } else {
-      dot.classList.add('active');
-      text.innerText = "VISITOR DETECTED";
-      radarText.innerText = "TAP ORB OR TYPE TO SPEAK";
+      responseText.innerText = "Server is busy. Retrying in a moment...";
     }
-  }
-
-  window.processQuery = async function(query) {
-    if (!query) return;
-    window.speechSynthesis.cancel();
-    
-    const outputPanel = document.getElementById("outputPanel");
-    const outputText = document.getElementById("outputText");
-    outputPanel.style.display = "block";
-    outputText.innerText = "Luna is thinking...";
 
     try {
-      const apiKey = await getGeminiApiKey();
+      const apiKey = await resolveApiKey();
       if (!apiKey) {
-        throw new Error("API key missing");
+        throw new Error("Gemini API key is not configured.");
       }
 
-      // If live faculty hasn't loaded yet, fetch it
       if (liveFacultyList.length === 0) {
         await fetchLiveFaculties();
       }
 
-      // Format live Supabase faculty directory into prompt
-      let facultyDirectoryContext = "\n\nLive Faculty Members Directory:\n";
+      let facultyDirectoryContext = "\n\nCurrent Faculty Directory:\n";
       if (liveFacultyList.length > 0) {
         liveFacultyList.forEach(f => {
           const room = f.details?.room || (f.cabin ? f.cabin.split(' (')[0] : 'N/A');
@@ -647,50 +669,268 @@
           const mentorDetails = f.details?.mentorDetails ? ` [Mentor for: ${f.details.mentorDetails}]` : '';
           const timetable = f.details?.timetable ? ` | Schedule: ${f.details.timetable}` : '';
 
-          facultyDirectoryContext += `- ${f.name}: Room ${room}, Floor: ${floor} | Mentor: ${mentor}${mentorDetails}${timetable}\n`;
+          facultyDirectoryContext += `- ${f.name}: Cabin ${room}, Floor: ${floor} | Mentor: ${mentor}${mentorDetails}${timetable}\n`;
         });
       } else {
-        facultyDirectoryContext += "No faculty members currently registered.\n";
+        facultyDirectoryContext += "No faculty members currently listed.\n";
       }
 
-      const customCreator = localStorage.getItem('luna_creator') || 'Jesin';
-      const baseContext = localStorage.getItem('luna_context') 
-        ? localStorage.getItem('luna_context').split("\n\nFaculty Members Directory:")[0]
-        : `Your name is LUNA (Logical Universal Navigation Assistant). You are the autonomous AI receptionist and navigation guide for the Computer Science & Engineering (CSE) Department. Created by ${customCreator}.`;
+      const creatorName = localStorage.getItem('luna_creator') || 'Jesin';
+      const prompt = `You are LUNA, the interactive kiosk receptionist for the Computer Science & Engineering Department. Developed by ${creatorName}.
+Use this official directory to answer questions regarding faculty cabins, floors, mentorships, and schedules:
+${facultyDirectoryContext}
 
-      const completePrompt = `${baseContext}${facultyDirectoryContext}\n\nVisitor query: "${query}"\nPlease answer accurately using the directory when asked about teachers, rooms, floors, or schedules.`;
+Visitor Question: "${query.trim()}"
+Provide an accurate, polite, and concise response.`;
 
-      const ai = new GoogleGenAI({ apiKey: apiKey });
-
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: completePrompt,
+        model: 'gemini-3.6-flash',
+        contents: prompt,
       });
 
-      const reply = response.text || "I'm here to help you navigate!";
-      outputText.innerText = reply;
-      window.speakText(reply);
+      const reply = response.text || "No relevant information found.";
+      responseText.innerText = reply;
+      speakResponse(reply);
+      isQueryProcessing = false;
 
-    } catch (error) {
-      console.error(error);
-      outputText.innerText = `I'm having trouble answering right now. Please check console or try again.`;
-      window.speakText("Sorry, I encountered an error processing that request.");
+    } catch (err) {
+      console.warn(`Query handling attempt ${retryCount + 1} failed:`, err);
+
+      // If the server is experiencing high demand (503), retry once after a short delay
+      if (err.message && err.message.includes("503") && retryCount < 1) {
+        console.log("Retrying query in 1.5 seconds due to 503 load...");
+        setTimeout(() => {
+          handleQuery(query, retryCount + 1);
+        }, 1500);
+        return;
+      }
+
+      isQueryProcessing = false;
+      responseText.innerText = "The service is temporarily busy. Please ask your question again in a moment.";
+      speakResponse("The system is temporarily busy. Please ask again in a moment.");
     }
   }
 
-  window.speakText = function(text) {
+  // 6. Voice Output
+  function speakResponse(text) {
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.2; utterance.pitch = 1.5; utterance.volume = 1.0;
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
     const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Zira')));
-    if (femaleVoice) utterance.voice = femaleVoice;
+    const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google')));
+    if (naturalVoice) utterance.voice = naturalVoice;
     window.speechSynthesis.speak(utterance);
   }
 
-  window.onload = () => {
-    window.initSpeechRecognition();
-    loadFaceModels();
-  };
+  // 7. Speech-to-Text Recognition Setup
+  function initSpeech() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      document.getElementById('transcriptText').innerText = "Speech recognition is not supported in this browser.";
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      isListening = true;
+      document.getElementById('micBtn').classList.add('active');
+      document.getElementById('statusDot').className = "status-dot listening";
+      document.getElementById('statusText').innerText = "LISTENING";
+      document.getElementById('transcriptText').innerText = "Listening... speak now";
+    };
+
+    recognition.onresult = (e) => {
+      let finalTranscript = '';
+      for (let i = e.resultIndex; i < e.results.length; ++i) {
+        if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+      }
+      if (finalTranscript) {
+        document.getElementById('transcriptText').innerText = `"${finalTranscript.trim()}"`;
+        handleQuery(finalTranscript.trim());
+      }
+    };
+
+    recognition.onend = () => {
+      isListening = false;
+      document.getElementById('micBtn').classList.remove('active');
+      document.getElementById('statusDot').className = "status-dot ready";
+      document.getElementById('statusText').innerText = "SYSTEM READY";
+    };
+
+    recognition.onerror = (e) => {
+      isListening = false;
+      document.getElementById('micBtn').classList.remove('active');
+      console.warn("Speech recognition error:", e.error);
+    };
+  }
+
+  // 8. Event Wiring
+  document.addEventListener('DOMContentLoaded', () => {
+    initSpeech();
+    fetchLiveFaculties();
+
+    // Central Globe Mic Button
+    document.getElementById('micBtn').addEventListener('click', async () => {
+      await initAudioVisualizer();
+      if (!recognition) {
+        alert("Speech recognition is not supported on this browser.");
+        return;
+      }
+      if (isListening) {
+        recognition.stop();
+      } else {
+        window.speechSynthesis.cancel();
+        try { recognition.start(); } catch(e) {}
+      }
+    });
+
+    // Search Action
+    document.getElementById('searchBtn').addEventListener('click', () => {
+      const input = document.getElementById('queryInput');
+      if (input.value.trim()) {
+        handleQuery(input.value.trim());
+        input.value = '';
+      }
+    });
+
+    // Enter Key
+    document.getElementById('queryInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const input = document.getElementById('queryInput');
+        if (input.value.trim()) {
+          handleQuery(input.value.trim());
+          input.value = '';
+        }
+      }
+    });
+
+    // Suggestion Pills
+    document.querySelectorAll('.pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const query = btn.getAttribute('data-query');
+        if (query) handleQuery(query);
+      });
+    });
+
+    // Initialize Face Recognition in background
+    setupFaceRecognition();
+  });
+
+  // 9. Facial Recognition Camera Loop
+  async function setupFaceRecognition() {
+    try {
+      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+      modelsLoaded = true;
+
+      // Creator Face Signature
+      const savedSnapshot = localStorage.getItem('luna_creator_face_snapshot');
+      const creatorName = localStorage.getItem('luna_creator') || 'Jesin';
+      if (savedSnapshot) {
+        const img = await faceapi.fetchImage(savedSnapshot);
+        const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+        if (detection) {
+          creatorFaceDescriptor = { name: creatorName, descriptor: detection.descriptor };
+        }
+      }
+
+      // Faculty Face Signatures
+      for (const faculty of liveFacultyList) {
+        const photoData = faculty.details?.photo;
+        if (photoData) {
+          try {
+            const img = await faceapi.fetchImage(photoData);
+            const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+            if (detection) {
+              knownFacultyFaces.push({
+                name: faculty.name,
+                room: faculty.details?.room || (faculty.cabin ? faculty.cabin.split(' (')[0] : 'N/A'),
+                floor: faculty.details?.floor || '',
+                descriptor: detection.descriptor
+              });
+            }
+          } catch (e) {}
+        }
+      }
+
+      // Start Camera
+      const video = document.getElementById('webcam');
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+      video.srcObject = stream;
+
+      video.addEventListener('play', () => {
+        setInterval(async () => {
+          if (!modelsLoaded) return;
+          const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+
+          if (detection) {
+            if (absenceTimer) { clearTimeout(absenceTimer); absenceTimer = null; }
+            if (!isPersonPresent) {
+              isPersonPresent = true;
+              let recognizedIdentity = null;
+
+              if (creatorFaceDescriptor) {
+                const distance = faceapi.euclideanDistance(detection.descriptor, creatorFaceDescriptor.descriptor);
+                if (distance < 0.52) recognizedIdentity = { type: 'creator', name: creatorFaceDescriptor.name };
+              }
+
+              if (!recognizedIdentity && knownFacultyFaces.length > 0) {
+                let lowestDistance = 0.52;
+                for (const fac of knownFacultyFaces) {
+                  const dist = faceapi.euclideanDistance(detection.descriptor, fac.descriptor);
+                  if (dist < lowestDistance) {
+                    lowestDistance = dist;
+                    recognizedIdentity = { type: 'faculty', ...fac };
+                  }
+                }
+              }
+
+              greetVisitor(recognizedIdentity);
+            }
+          } else {
+            if (isPersonPresent && !absenceTimer) {
+              absenceTimer = setTimeout(() => {
+                isPersonPresent = false;
+                document.getElementById('greetingHeader').innerText = "How can I assist you?";
+                document.getElementById('responseCard').style.display = "none";
+                absenceTimer = null;
+              }, 4000);
+            }
+          }
+        }, 1200);
+      });
+    } catch (e) {
+      console.warn("Face recognition or camera unavailable:", e);
+    }
+  }
+
+  function greetVisitor(identity) {
+    let msg = "Welcome to the Department of Computer Science & Engineering. How can I help you navigate today?";
+    const greetingHeader = document.getElementById('greetingHeader');
+
+    if (identity && identity.type === 'creator') {
+      msg = `Welcome back, ${identity.name}. All department systems are running normally.`;
+      greetingHeader.innerText = `Welcome, ${identity.name}`;
+    } else if (identity && identity.type === 'faculty') {
+      msg = `Good day, ${identity.name}. Your cabin is located at ${identity.room} ${identity.floor ? '(' + identity.floor + ')' : ''}.`;
+      greetingHeader.innerText = `Welcome, ${identity.name}`;
+    } else {
+      greetingHeader.innerText = "Welcome to CSE Department";
+    }
+
+    const responseCard = document.getElementById("responseCard");
+    const responseText = document.getElementById("responseText");
+    responseCard.style.display = "block";
+    responseText.innerText = msg;
+    speakResponse(msg);
+  }
 </script>
 
 </body>
