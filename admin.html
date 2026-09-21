@@ -6,6 +6,9 @@
   <title>LUNA — Admin Configuration & Face Registration</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Load face-api.js for facial recognition descriptor embedding -->
   <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
 
@@ -339,7 +342,7 @@
       <button class="btn btn-secondary" id="toggleFacultyFormBtn" onclick="toggleFacultyForm()" style="margin-top: 0; padding: 8px 16px;">+ Add Faculty</button>
     </div>
 
-    <!-- Hidden Faculty Form Box (Appears only when Add Faculty is clicked) -->
+    <!-- Hidden Faculty Form Box -->
     <div id="facultyFormContainer">
       <div class="form-group">
         <label>Faculty Name</label>
@@ -389,7 +392,6 @@
             <input type="file" id="facultyFileUpload" accept="image/*" style="display:none;" onchange="handleFacultyFileUpload(event)">
           </label>
 
-          <!-- Delete Option for Currently Registered Faculty Face -->
           <button type="button" class="btn btn-danger" style="margin-top:0;" onclick="deleteCurrentFacultyFace()">Delete Registered Face</button>
         </div>
 
@@ -397,7 +399,7 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 15px;">
-        <button class="btn" onclick="addFaculty()" style="flex: 1;">Save Faculty Entry</button>
+        <button class="btn" id="saveFacultyBtn" onclick="saveFaculty()" style="flex: 1;">Save Faculty Entry</button>
         <button class="btn btn-secondary" onclick="toggleFacultyForm()" style="margin-top:0;">Cancel</button>
       </div>
     </div>
@@ -415,36 +417,215 @@
 <video id="hiddenFacultyVideo" autoplay playsinline style="display:none;"></video>
 <canvas id="snapshotCanvas" style="display:none;"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
   // 1. Supabase client configuration
-const SUPABASE_URL = 'https://habfsfuyswsgoknybgpu.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_9pAXGd72lF-NlgYVYqb8OQ_8RMteV7J';
+  const SUPABASE_URL = 'https://habfsfuyswsgoknybgpu.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_9pAXGd72lF-NlgYVYqb8OQ_8RMteV7J';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 2. Initialize client
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  let faculties = JSON.parse(localStorage.getItem('luna_faculties')) || [];
+  let faculties = [];
+  let editingFacultyId = null;
   let modelsLoaded = false;
   let cameraActive = false;
   let currentFacultyPhotoData = null; 
   const videoElement = document.getElementById('adminWebcam');
 
+  // Load Saved General & Creator Settings
   document.getElementById('creatorNameInput').value = localStorage.getItem('luna_creator') || 'Jesin';
   document.getElementById('creatorBatchInput').value = localStorage.getItem('luna_batch') || 's3';
   
   const savedCtx = localStorage.getItem('luna_context');
-  if(savedCtx) {
+  if (savedCtx) {
     let cleanCtx = savedCtx.split("\n\nFaculty Members Directory:")[0];
     document.getElementById('systemContextInput').value = cleanCtx;
   }
 
-  function switchTab(tabId, event) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  // --- Supabase Database Sync Operations ---
 
-    document.getElementById('tab-' + tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
+  async function fetchFacultiesFromDB() {
+    const container = document.getElementById('facultyListContainer');
+    container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">Loading faculty directory from cloud database...</p>';
+
+    const { data, error } = await supabaseClient
+      .from('faculty')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching faculties:', error);
+      container.innerHTML = `<p style="color: #fca5a5; font-size: 13px;">Error loading faculty data: ${error.message}</p>`;
+      return;
+    }
+
+    faculties = (data || []).map(row => ({
+      id: row.id,
+      name: row.name || '',
+      room: row.details?.room || (row.cabin ? row.cabin.split(' (')[0] : ''),
+      floor: row.details?.floor || (row.cabin && row.cabin.includes('(') ? row.cabin.split('(')[1].replace(')', '') : ''),
+      isMentor: row.details?.isMentor || 'No',
+      mentorDetails: row.details?.mentorDetails || '',
+      timetable: row.details?.timetable || '',
+      photo: row.details?.photo || null
+    }));
+
+    renderFacultyList();
+  }
+
+  async function saveFaculty() {
+    const name = document.getElementById('facName').value.trim();
+    const room = document.getElementById('facRoom').value.trim();
+    const floor = document.getElementById('facFloor').value.trim();
+    const isMentor = document.getElementById('facIsMentor').value;
+    const mentorDetails = document.getElementById('facMentorDetails').value.trim();
+    const timetable = document.getElementById('facTimetable').value.trim();
+    const photo = currentFacultyPhotoData;
+
+    if (!name || !room || !floor) {
+      alert('Please fill in at least the Faculty Name, Room, and Floor.');
+      return;
+    }
+
+    const saveBtn = document.getElementById('saveFacultyBtn');
+    saveBtn.disabled = true;
+    saveBtn.innerText = 'Saving to Database...';
+
+    const payload = {
+      name: name,
+      cabin: `${room} (${floor})`,
+      details: {
+        room: room,
+        floor: floor,
+        isMentor: isMentor,
+        mentorDetails: mentorDetails,
+        timetable: timetable,
+        photo: photo
+      }
+    };
+
+    let error = null;
+
+    if (editingFacultyId) {
+      // Update existing record
+      const res = await supabaseClient
+        .from('faculty')
+        .update(payload)
+        .eq('id', editingFacultyId);
+      error = res.error;
+    } else {
+      // Insert new record
+      const res = await supabaseClient
+        .from('faculty')
+        .insert([payload]);
+      error = res.error;
+    }
+
+    saveBtn.disabled = false;
+    saveBtn.innerText = 'Save Faculty Entry';
+
+    if (error) {
+      console.error('Supabase write error:', error);
+      alert('Failed to save faculty record: ' + error.message);
+      return;
+    }
+
+    clearFacultyForm();
+    toggleFacultyForm();
+    await fetchFacultiesFromDB();
+  }
+
+  async function removeFaculty(id) {
+    if (!confirm("Are you sure you want to permanently delete this faculty member from the database?")) {
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from('faculty')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Error deleting faculty: ' + error.message);
+      return;
+    }
+
+    await fetchFacultiesFromDB();
+  }
+
+  function editFaculty(id) {
+    const f = faculties.find(item => item.id === id);
+    if (!f) return;
+
+    editingFacultyId = f.id;
+    document.getElementById('facName').value = f.name;
+    document.getElementById('facRoom').value = f.room;
+    document.getElementById('facFloor').value = f.floor;
+    document.getElementById('facIsMentor').value = f.isMentor;
+    document.getElementById('facMentorDetails').value = f.mentorDetails || '';
+    document.getElementById('facTimetable').value = f.timetable || '';
+    currentFacultyPhotoData = f.photo || null;
+
+    toggleMentorFields();
+
+    const photoStatus = document.getElementById('facultyPhotoStatus');
+    if (f.photo) {
+      photoStatus.innerText = "Loaded existing photo for editing.";
+      photoStatus.style.color = "var(--accent-emerald)";
+    } else {
+      photoStatus.innerText = "No photo added yet for this entry.";
+      photoStatus.style.color = "var(--text-muted)";
+    }
+
+    document.getElementById('saveFacultyBtn').innerText = 'Update Faculty Entry';
+    document.getElementById('facultyFormContainer').style.display = 'block';
+    document.getElementById('toggleFacultyFormBtn').innerText = 'Close Form';
+    window.scrollTo({ top: document.getElementById('facultyFormContainer').offsetTop - 100, behavior: 'smooth' });
+  }
+
+  function renderFacultyList() {
+    const container = document.getElementById('facultyListContainer');
+    container.innerHTML = '';
+    
+    if (faculties.length === 0) {
+      container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No faculty members registered in the database yet.</p>';
+      return;
+    }
+
+    faculties.forEach((f) => {
+      let avatarHtml = f.photo 
+        ? `<img src="${f.photo}" class="faculty-avatar-preview">` 
+        : `<div class="faculty-avatar-preview" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); font-size:9px; color:var(--text-muted); text-align:center;">No Photo</div>`;
+      
+      container.innerHTML += `
+        <div class="faculty-card-preview">
+          ${avatarHtml}
+          <div class="faculty-info" style="flex-grow:1;">
+            <h4>${f.name}</h4>
+            <p><strong>Location:</strong> ${f.room}, ${f.floor}</p>
+            <p><strong>Mentor:</strong> ${f.isMentor} ${f.mentorDetails ? '('+f.mentorDetails+')' : ''}</p>
+            <p><strong>Timetable:</strong> ${f.timetable || 'Not specified'}</p>
+          </div>
+          <div class="card-actions">
+            <button class="edit-btn" onclick="editFaculty(${f.id})">Edit</button>
+            <button class="delete-btn" onclick="removeFaculty(${f.id})">Remove</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  function clearFacultyForm() {
+    editingFacultyId = null;
+    document.getElementById('facName').value = '';
+    document.getElementById('facRoom').value = '';
+    document.getElementById('facFloor').value = '';
+    document.getElementById('facIsMentor').value = 'No';
+    document.getElementById('facMentorDetails').value = '';
+    document.getElementById('facTimetable').value = '';
+    document.getElementById('mentorClassGroup').style.display = 'none';
+    currentFacultyPhotoData = null;
+    document.getElementById('saveFacultyBtn').innerText = 'Save Faculty Entry';
+    document.getElementById('facultyPhotoStatus').innerText = 'No photo added yet for this entry.';
+    document.getElementById('facultyPhotoStatus').style.color = 'var(--text-muted)';
   }
 
   function toggleFacultyForm() {
@@ -454,12 +635,50 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     if (formContainer.style.display === 'block') {
       formContainer.style.display = 'none';
       btn.innerText = '+ Add Faculty';
+      clearFacultyForm();
     } else {
       formContainer.style.display = 'block';
       btn.innerText = 'Close Form';
       clearFacultyForm();
     }
   }
+
+  function toggleMentorFields() {
+    const isMentor = document.getElementById('facIsMentor').value;
+    document.getElementById('mentorClassGroup').style.display = (isMentor === 'Yes') ? 'block' : 'none';
+  }
+
+  // --- General UI & Navigation ---
+
+  function switchTab(tabId, event) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+    document.getElementById('tab-' + tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  function saveSettings() {
+    let contextText = document.getElementById('systemContextInput').value;
+    if (contextText.includes("\n\nFaculty Members Directory:")) {
+      contextText = contextText.split("\n\nFaculty Members Directory:")[0];
+    }
+
+    let facultyString = "\n\nFaculty Members Directory:\n";
+    faculties.forEach(f => {
+      facultyString += `- Name: ${f.name} | Room: ${f.room} (${f.floor}) | Mentor Status: ${f.isMentor} ${f.mentorDetails ? '[Class/Floor: '+f.mentorDetails+']' : ''} | Timetable: ${f.timetable || 'N/A'}\n`;
+    });
+
+    localStorage.setItem('luna_context', contextText + facultyString);
+    localStorage.setItem('luna_creator', document.getElementById('creatorNameInput').value);
+    localStorage.setItem('luna_batch', document.getElementById('creatorBatchInput').value);
+
+    const msg = document.getElementById('statusMsg');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  }
+
+  // --- Face Recognition & Camera Ops ---
 
   async function toggleAdminCamera() {
     const box = document.getElementById('webcamBoxContainer');
@@ -562,7 +781,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       const facVideo = document.getElementById('hiddenFacultyVideo');
       facVideo.srcObject = stream;
 
-      // Wait for video stream frames to load fully to prevent black snapshots
       await new Promise((resolve, reject) => {
         facVideo.onloadedmetadata = () => {
           facVideo.play().then(resolve).catch(reject);
@@ -631,130 +849,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     }
   }
 
-  function toggleMentorFields() {
-    const isMentor = document.getElementById('facIsMentor').value;
-    document.getElementById('mentorClassGroup').style.display = (isMentor === 'Yes') ? 'block' : 'none';
-  }
-
-  function renderFacultyList() {
-    const container = document.getElementById('facultyListContainer');
-    container.innerHTML = '';
-    
-    if (faculties.length === 0) {
-      container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No custom faculty members added yet.</p>';
-      return;
-    }
-
-    faculties.forEach((f, index) => {
-      let avatarHtml = f.photo ? `<img src="${f.photo}" class="faculty-avatar-preview">` : `<div class="faculty-avatar-preview" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); font-size:9px; color:var(--text-muted); text-align:center;">No Photo</div>`;
-      
-      container.innerHTML += `
-        <div class="faculty-card-preview">
-          ${avatarHtml}
-          <div class="faculty-info" style="flex-grow:1;">
-            <h4>${f.name}</h4>
-            <p><strong>Location:</strong> ${f.room}, ${f.floor}</p>
-            <p><strong>Mentor:</strong> ${f.isMentor} ${f.mentorDetails ? '('+f.mentorDetails+')' : ''}</p>
-            <p><strong>Timetable:</strong> ${f.timetable || 'Not specified'}</p>
-          </div>
-          <div class="card-actions">
-            <button class="edit-btn" onclick="editFaculty(${index})">Edit</button>
-            <button class="delete-btn" onclick="removeFaculty(${index})">Remove</button>
-          </div>
-        </div>
-      `;
-    });
-  }
-
-  function addFaculty() {
-    const name = document.getElementById('facName').value.trim();
-    const room = document.getElementById('facRoom').value.trim();
-    const floor = document.getElementById('facFloor').value.trim();
-    const isMentor = document.getElementById('facIsMentor').value;
-    const mentorDetails = document.getElementById('facMentorDetails').value.trim();
-    const timetable = document.getElementById('facTimetable').value.trim();
-    const photo = currentFacultyPhotoData;
-
-    if (!name || !room || !floor) {
-      alert('Please fill in at least the Faculty Name, Room, and Floor.');
-      return;
-    }
-
-    faculties.push({ name, room, floor, isMentor, mentorDetails, timetable, photo });
-    renderFacultyList();
-    toggleFacultyForm(); 
-  }
-
-  function editFaculty(index) {
-    const f = faculties[index];
-    
-    document.getElementById('facName').value = f.name;
-    document.getElementById('facRoom').value = f.room;
-    document.getElementById('facFloor').value = f.floor;
-    document.getElementById('facIsMentor').value = f.isMentor;
-    document.getElementById('facMentorDetails').value = f.mentorDetails || '';
-    document.getElementById('facTimetable').value = f.timetable || '';
-    currentFacultyPhotoData = f.photo || null;
-
-    toggleMentorFields();
-
-    const photoStatus = document.getElementById('facultyPhotoStatus');
-    if (f.photo) {
-      photoStatus.innerText = "Loaded existing photo for editing.";
-      photoStatus.style.color = "var(--accent-emerald)";
-    } else {
-      photoStatus.innerText = "No photo added yet for this entry.";
-      photoStatus.style.color = "var(--text-muted)";
-    }
-
-    faculties.splice(index, 1);
-    renderFacultyList();
-    
-    document.getElementById('facultyFormContainer').style.display = 'block';
-    document.getElementById('toggleFacultyFormBtn').innerText = 'Close Form';
-    window.scrollTo({ top: document.getElementById('facultyFormContainer').offsetTop - 100, behavior: 'smooth' });
-  }
-
-  function clearFacultyForm() {
-    document.getElementById('facName').value = '';
-    document.getElementById('facRoom').value = '';
-    document.getElementById('facFloor').value = '';
-    document.getElementById('facIsMentor').value = 'No';
-    document.getElementById('facMentorDetails').value = '';
-    document.getElementById('facTimetable').value = '';
-    document.getElementById('mentorClassGroup').style.display = 'none';
-    currentFacultyPhotoData = null;
-    document.getElementById('facultyPhotoStatus').innerText = 'No photo added yet for this entry.';
-    document.getElementById('facultyPhotoStatus').style.color = 'var(--text-muted)';
-  }
-
-  function removeFaculty(index) {
-    faculties.splice(index, 1);
-    renderFacultyList();
-  }
-
-  function saveSettings() {
-    let contextText = document.getElementById('systemContextInput').value;
-    if (contextText.includes("\n\nFaculty Members Directory:")) {
-      contextText = contextText.split("\n\nFaculty Members Directory:")[0];
-    }
-
-    let facultyString = "\n\nFaculty Members Directory:\n";
-    faculties.forEach(f => {
-      facultyString += `- Name: ${f.name} | Room: ${f.room} (${f.floor}) | Mentor Status: ${f.isMentor} ${f.mentorDetails ? '[Class/Floor: '+f.mentorDetails+']' : ''} | Timetable: ${f.timetable || 'N/A'}\n`;
-    });
-
-    localStorage.setItem('luna_context', contextText + facultyString);
-    localStorage.setItem('luna_creator', document.getElementById('creatorNameInput').value);
-    localStorage.setItem('luna_batch', document.getElementById('creatorBatchInput').value);
-    localStorage.setItem('luna_faculties', JSON.stringify(faculties));
-
-    const msg = document.getElementById('statusMsg');
-    msg.style.display = 'block';
-    setTimeout(() => { msg.style.display = 'none'; }, 3000);
-  }
-
-  renderFacultyList();
+  // Fetch all live records when page finishes loading
+  window.addEventListener('DOMContentLoaded', fetchFacultiesFromDB);
 </script>
 
 </body>
